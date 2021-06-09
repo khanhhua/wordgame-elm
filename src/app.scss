@@ -1,0 +1,16 @@
+@keyframes tetrix {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(110%);
+  }
+}
+
+.animation-tetrix {
+  animation: tetrix 8s ease-in running forwards;
+}
+
+.word-sprite {
+  font-size: 2rem;
+}
