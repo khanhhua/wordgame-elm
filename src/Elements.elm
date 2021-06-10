@@ -3,15 +3,19 @@ module Elements exposing (..)
 import Common exposing (Model, dumpster_inner_width)
 import Data exposing (Answer, Word)
 import Json.Decode
-import Svg as S
-import Svg.Attributes as SA
+--import Svg as S
+--import Svg.Attributes as SA
 
-import Html exposing (Html, a, button, div, li, nav, text, ul)
-import Html.Attributes exposing (class, style)
-import Html.Events exposing (onClick)
-import Svg.Events as SE
+import Html exposing (Html, a, button, div, li, nav, span, text, ul)
+import Html.Attributes exposing (class, id, style)
+import Html.Events exposing (on, onClick)
+--import Svg.Events as SE
 
 type Action msg = Action String msg
+
+
+px : Int -> String
+px l = ( String.fromInt l ) ++ "px"
 
 action : String -> msg -> Action msg
 action label msg =
@@ -39,50 +43,58 @@ navBar actions =
         ]
 
 
-stage : (Word -> msg) -> (Word -> msg) -> ( String, String ) -> Model -> Html msg
+stage : (Word -> msg) -> (Word -> msg) -> ( Int, Int ) -> Model -> Html msg
 stage onAnimationComplete onSelectWord ( width, height ) model =
-    S.svg
-        [ SA.width width
-        , SA.height height
-        , SA.viewBox ( "0 0 " ++ width ++ " " ++ height )
+    let
+        isHighlighted : Word -> Bool
+        isHighlighted = case model.selectedWord of
+            Nothing -> ( \_ -> False )
+            Just key -> ( \word -> word == key )
+    in
+    div
+        [ class "stage"
+        , style "width" ( px width )
+        , style "height" ( px height )
+        , class "position-relative mt-1"
         , style "background-color" "#eee"
+        , style "margin-left" "-10px"
         ]
-        ( [ dumster ]
+        ( [ dumster ( height - 20 ) ]
         ++
-        ( model.stagedWords |> List.map ( wordSprite onAnimationComplete onSelectWord True ) )
+        ( model.stagedWords
+            |> List.map ( \word -> wordSprite onAnimationComplete onSelectWord ( isHighlighted word ) True  word ) )
         )
 
 
-dumster : S.Svg msg
-dumster =
-    S.rect
-        [ SA.x "10"
-        , SA.y "10"
-        , SA.width dumpster_inner_width
-        , SA.height "500"
-        , SA.rx "5"
-        , SA.ry "5"
-        , SA.fill "#ddd"
+dumster : Int -> Html msg
+dumster height =
+    div
+        [ class "position-absolute"
+        , style "left" "10px"
+        , style "top" "10px"
+        , style "width" ( px dumpster_inner_width )
+        , style "height" ( px height )
+        , style "border-radius" "5px"
+        , style "background-color" "#ddd"
         ]
         []
 
-wordSprite : (Word -> msg) -> (Word -> msg) -> Bool -> Word -> S.Svg msg
-wordSprite onAnimationComplete onSelectWord animating word =
+wordSprite : (Word -> msg) -> (Word -> msg) -> Bool -> Bool -> Word -> Html msg
+wordSprite onAnimationComplete onSelectWord highlighted animating word =
     let
         (x, y) = word.position
-        class = SA.class ( if animating then "word-sprite animation-tetrix" else "word-sprite" )
+        class_ = class ( if animating then "word-sprite animation-tetrix" else "word-sprite" )
     in
-     S.text_
-         [ SA.id word.text
-         , SA.x ( String.fromInt x )
-         , SA.y ( String.fromInt y )
-         , SA.textAnchor "middle"
-         , SA.fill "black"
-         , class
-         , SE.onClick ( onSelectWord word )
-         , SE.on "animationend" ( Json.Decode.succeed ( onAnimationComplete word ) )
+     span
+         [ id word.text
+         , style "left" ( px x )
+         , style "top" ( px y )
+         , style "color" ( if highlighted then "red" else "black" )
+         , class_
+         , onClick ( onSelectWord word )
+         , on "animationend" ( Json.Decode.succeed ( onAnimationComplete word ) )
          ]
-         [ S.text word.text
+         [ text word.text
          ]
 
 

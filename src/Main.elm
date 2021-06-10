@@ -1,18 +1,20 @@
 module Main exposing (..)
 
 import Browser exposing (Document)
+import Browser.Dom
 import Browser.Navigation as Navigation
 
 import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (class, style)
 import Random
+import Task
 import Time
 import Url
 
 import Common exposing (..)
 import Data exposing (..)
 import Data exposing (GameStatus(..), Word)
-import Elements exposing (action, answerBar, navBar, stage, stats)
+import Elements exposing (action, answerBar, navBar, px, stage, stats)
 
 
 main : Program () Model Msg
@@ -29,24 +31,30 @@ main =
 
 init : () -> Url.Url -> Navigation.Key -> ( Model, Cmd Msg )
 init () url key =
-    ( { count = 0
+    ( { screensize = dimension 0 0
+        , count = 0
         , words = []
         , stagedWords = []
         , status = MENU
         , selectedWord = Nothing
         , answers = []
-        }, Cmd.none )
+        }, Task.perform SetScreenSize Browser.Dom.getViewport )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        SetScreenSize screen ->
+            let
+                size = ( screen.viewport.width, screen.viewport.height )
+            in
+            ( { model | screensize = size } , Cmd.none )
         SelectFile fileName ->
             ( model, loadFileByName GotWordList fileName )
         GotWordList words ->
             let
                 leftX = 70
-                rightX = (( String.toInt dumpster_inner_width ) |> Maybe.withDefault 0 ) - leftX
+                rightX = dumpster_inner_width - leftX
                 randomizer = Random.list ( List.length words ) ( Random.int leftX rightX )
             in
             ( { model
@@ -143,13 +151,13 @@ view model =
             [ div [ class "row" ]
                 [ div
                     [ class "col-1 mx-auto"
-                    , style "width" ( dumpster_width ++ "px" )
+                    , style "width" ( px dumpster_width )
                     ]
                     [ stats model.answers
                     , model |> stage
                         WordAnimationComplete
                         SelectWord
-                        ( dumpster_width, "520" )
+                        ( dumpster_width, (getHi model.screensize - 200) )
                     , answerBar SelectAnswer
                     ]
                 ]
