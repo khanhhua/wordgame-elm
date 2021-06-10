@@ -6,7 +6,7 @@ import Browser.Navigation as Navigation
 
 import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (class, style)
-import Random
+import Random exposing (initialSeed)
 import Task
 import Time
 import Url
@@ -53,23 +53,32 @@ update msg model =
             ( model, loadFileByName GotWordList fileName )
         GotWordList words ->
             let
-                leftX = 70
-                rightX = dumpster_inner_width - leftX
-                randomizer = Random.list ( List.length words ) ( Random.int leftX rightX )
+                leftX = 30
+                rightX = dumpster_inner_width - leftX * 4
+                randomizer = Random.map2 ( \orderings xs ->
+                        ( List.map3 (\a b word -> { ordering = a, position = ( b, 0 ), word = word })
+                            orderings
+                            xs
+                            words )
+                        |> List.sortBy (\item -> item.ordering)
+                        |> List.map (\item ->
+                            let
+                                word = item.word
+                            in
+                                { word | position = item.position }
+                            )
+                    )
+                    ( Random.list ( List.length words ) ( Random.float 0 1 ) )
+                    ( Random.list ( List.length words ) ( Random.int leftX rightX ) )
             in
             ( { model
                 | count = words |> List.length
                 , words = words
-                } , Random.generate (\xs -> UpdateWordPosition ( xs |> List.map ( \x -> ( x, 0 ) ) ) ) randomizer
+                } , Random.generate UpdateWordPosition randomizer
             )
-        UpdateWordPosition positions ->
-            let
-                pairs = List.map2 ( \word position -> { word | position = position } )
-                    model.words
-                    positions
-            in
+        UpdateWordPosition words ->
             ( { model
-            | words = pairs
+            | words = words
             } , Cmd.none
             )
         StartGame ->
@@ -85,32 +94,44 @@ update msg model =
                 , stagedWords = stagedWords
                 , status = IN_GAME
                 }, Cmd.none )
-        WordAnimationComplete _ ->
+        WordAnimationComplete key ->
             let
                 count = model.count - 1
                 status = if 0 == count then GAMEOVER else model.status
+                stagedWords = model.stagedWords
+                    |> List.map (\word ->
+                        if word == key then
+                            { word | expired = True }
+                        else
+                            word
+                    )
             in
             ( { model
                 | count = count
+                , stagedWords = stagedWords
                 , status = status
                 } , Cmd.none)
-        SelectWord word ->
-            ( { model | selectedWord = Just word }, Cmd.none )
-        SelectAnswer answerText ->
+        SelectAnswer word answerText ->
             let
-                answers = case model.selectedWord of
-                    Just word ->
-                        if ( word.gender == MAS && answerText == "DER" )
-                            || ( word.gender == FEM && answerText == "DIE" )
-                            || ( word.gender == NEU && answerText == "DAS" )
-                        then
-                             ( Answer word.text word.gender True ) :: model.answers
+                answers =
+                    if ( word.gender == MAS && answerText == "DER" )
+                        || ( word.gender == FEM && answerText == "DIE" )
+                        || ( word.gender == NEU && answerText == "DAS" )
+                    then
+                         ( Answer word.text word.gender True ) :: model.answers
+                    else
+                         ( Answer word.text word.gender False ) :: model.answers
+                stagedWords = model.stagedWords
+                    |> List.map (\word_ ->
+                        if word_ == word then
+                            { word_ | expired = True }
                         else
-                             ( Answer word.text word.gender False ) :: model.answers
-                    Nothing -> model.answers
+                            word_
+                    )
             in
             ( { model
                 | answers = answers
+                , stagedWords = stagedWords
                 }, Cmd.none )
         Tick _ ->
             let
@@ -156,9 +177,8 @@ view model =
                     [ stats model.answers
                     , model |> stage
                         WordAnimationComplete
-                        SelectWord
+                        SelectAnswer
                         ( dumpster_width, (getHi model.screensize - 200) )
-                    , answerBar SelectAnswer
                     ]
                 ]
             ]

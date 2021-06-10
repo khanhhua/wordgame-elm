@@ -19,7 +19,7 @@ toWordList content =
         case line |> String.split ";" of
             [ text, meaning, gender ] ->
                 case deserializeGender gender of
-                    Ok gender_ -> Just ( Word text meaning gender_ (0, 0) )
+                    Ok gender_ -> Just ( Word text meaning gender_ (0, 0) False )
                     _ -> Nothing
             _ -> Nothing
         )
@@ -47,6 +47,7 @@ type alias Word =
     , meaning : String
     , gender : Gender
     , position : ( Int, Int )
+    , expired : Bool
     }
 
 
