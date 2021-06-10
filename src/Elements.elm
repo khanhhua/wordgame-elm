@@ -23,34 +23,30 @@ action label msg =
 
 navBar : List ( Action msg ) -> Html msg
 navBar actions =
-    nav [ class "navbar navbar-expand-lg navbar-light bg-light" ]
+    nav [ class "navbar navbar-expand navbar-light bg-light" ]
         [ div [ class "container-fluid" ]
             [ a [class "navbar-brand"] [ text "WordGame" ]
-            , ul [ class "navbar-nav mr-0" ]
+            , ul [ class "navbar-nav me-auto" ]
                 ( actions
                     |> List.map ( \item ->
                         let
                             ( label, msg ) = case item of
                                 Action label_ msg_ -> ( label_, msg_ )
                         in
-                        button
-                            [ onClick msg
-                            , class "btn btn-light" ]
-                            [ text label ]
+                        li [ class "nav-item" ]
+                            [ a
+                                [ onClick msg
+                                , class "btn btn-light" ]
+                                [ text label ]
+                            ]
                     )
                 )
             ]
         ]
 
 
-stage : (Word -> msg) -> (Word -> msg) -> ( Int, Int ) -> Model -> Html msg
-stage onAnimationComplete onSelectWord ( width, height ) model =
-    let
-        isHighlighted : Word -> Bool
-        isHighlighted = case model.selectedWord of
-            Nothing -> ( \_ -> False )
-            Just key -> ( \word -> word == key )
-    in
+stage : (Word -> msg) -> (Word -> String -> msg) -> ( Int, Int ) -> Model -> Html msg
+stage onAnimationComplete onAnswer ( width, height ) model =
     div
         [ class "stage"
         , style "width" ( px width )
@@ -62,7 +58,7 @@ stage onAnimationComplete onSelectWord ( width, height ) model =
         ( [ dumster ( height - 20 ) ]
         ++
         ( model.stagedWords
-            |> List.map ( \word -> wordSprite onAnimationComplete onSelectWord ( isHighlighted word ) True  word ) )
+            |> List.map ( \word -> wordSprite onAnimationComplete onAnswer True word ) )
         )
 
 
@@ -79,41 +75,51 @@ dumster height =
         ]
         []
 
-wordSprite : (Word -> msg) -> (Word -> msg) -> Bool -> Bool -> Word -> Html msg
-wordSprite onAnimationComplete onSelectWord highlighted animating word =
+wordSprite : (Word -> msg) -> (Word -> String -> msg) -> Bool -> Word -> Html msg
+wordSprite onAnimationComplete onAnswer animating word =
     let
         (x, y) = word.position
-        class_ = class ( if animating then "word-sprite animation-tetrix" else "word-sprite" )
+        class_ = class ( if animating
+            then "word-sprite animation-tetrix"
+            else "word-sprite" )
+        onSelectAnswer = onAnswer word
     in
-     span
-         [ id word.text
-         , style "left" ( px x )
-         , style "top" ( px y )
-         , style "color" ( if highlighted then "red" else "black" )
-         , class_
-         , onClick ( onSelectWord word )
-         , on "animationend" ( Json.Decode.succeed ( onAnimationComplete word ) )
-         ]
-         [ text word.text
-         ]
+    if word.expired then
+        text ""
+    else
+        div
+            [ id word.text
+            , style "left" ( px x )
+            , style "top" ( px y )
+            , style "color" "black"
+            , class_
+            , on "animationend" ( Json.Decode.succeed ( onAnimationComplete word ) )
+            ]
+                [ div [ class "badge bg-light text-dark rounded-pill"]
+                    [ text word.text ]
+                , answerBar onSelectAnswer
+                ]
 
 
 answerBar : ( String -> msg ) -> Html msg
 answerBar onSelectAnswer =
     div [ class "d-flex mt-3" ]
         [ button
-            [ class "btn btn-outline-secondary mx-1"
+            [ class "btn btn-light btn-lg bg-masculine text-light mx-1"
             , style "width" "33.33%"
+            , style "height" "4.5em"
             , onClick ( onSelectAnswer "DER" )
             ] [ text "DER" ]
         , button
-            [ class "btn btn-outline-secondary mx-1"
+            [ class "btn btn-light btn-lg bg-feminine text-light mx-1"
             , style "width" "33.33%"
+            , style "height" "4.5em"
             , onClick ( onSelectAnswer "DIE" )
             ] [ text "DIE" ]
         , button
-            [ class "btn btn-outline-secondary mx-1"
+            [ class "btn btn-light btn-lg bg-neutrum text-light mx-1"
             , style "width" "33.33%"
+            , style "height" "4.5em"
             , onClick ( onSelectAnswer "DAS" )
             ] [ text "DAS" ]
         ]

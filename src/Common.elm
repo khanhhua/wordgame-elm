@@ -4,8 +4,8 @@ import Browser.Dom as Browser
 import Data exposing (Answer, GameStatus, Word)
 import Time
 
-dumpster_width = 520
-dumpster_inner_width = 500
+dumpster_width = 620
+dumpster_inner_width = 600
 release_frequency = 0.6
 
 
@@ -27,10 +27,10 @@ type Msg
     | SelectFile String
     | GotWordList ( List Word )
     | StartGame
-    | UpdateWordPosition ( List ( Int, Int ) )
+    | UpdateWordPosition ( List Word )
     | WordAnimationComplete Word
     | SelectWord Word
-    | SelectAnswer String
+    | SelectAnswer Word String
 
 
 dimension : Float -> Float -> ( Float, Float )
