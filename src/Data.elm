@@ -40,9 +40,7 @@ loadCollectionsMetadata toMsg =
                     ( \result ->
                         case result of
                             Ok package -> toMsg package.collections
-                            Err error ->
-                                Debug.log ( "ERROR: " ++ ( Debug.toString error) )
-                                NoOp
+                            Err _ -> NoOp
                     )
                     ( decodePackage packageId )
                 }
