@@ -164,7 +164,7 @@ view : Model -> Document Msg
 view model =
     { title = "WordGame - ELM 2021"
     , body =
-        [ navBar
+        [ model |> navBar
             [ action "Start" StartGame
             , action "Load" ( SelectFile "menschen/A2.txt" )
             ]
@@ -172,13 +172,12 @@ view model =
             [ div [ class "row" ]
                 [ div
                     [ class "col-1 mx-auto"
-                    , style "width" ( px dumpster_width )
+                    , style "width" ( px (getWi model.screensize - 200) )
                     ]
-                    [ stats model.answers
-                    , model |> stage
+                    [ model |> stage
                         WordAnimationComplete
                         SelectAnswer
-                        ( dumpster_width, (getHi model.screensize - 200) )
+                        ( (getWi model.screensize - 200), (getHi model.screensize - 200) )
                     ]
                 ]
             ]

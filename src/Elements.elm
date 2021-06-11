@@ -3,13 +3,10 @@ module Elements exposing (..)
 import Common exposing (Model, dumpster_inner_width)
 import Data exposing (Answer, Word)
 import Json.Decode
---import Svg as S
---import Svg.Attributes as SA
 
-import Html exposing (Html, a, button, div, li, nav, span, text, ul)
+import Html exposing (Attribute, Html, a, button, div, li, nav, span, text, ul)
 import Html.Attributes exposing (class, id, style)
 import Html.Events exposing (on, onClick)
---import Svg.Events as SE
 
 type Action msg = Action String msg
 
@@ -21,11 +18,11 @@ action : String -> msg -> Action msg
 action label msg =
     Action label msg
 
-navBar : List ( Action msg ) -> Html msg
-navBar actions =
+navBar : List ( Action msg ) -> Model -> Html msg
+navBar actions model =
     nav [ class "navbar navbar-expand navbar-light bg-light" ]
         [ div [ class "container-fluid" ]
-            [ a [class "navbar-brand"] [ text "WordGame" ]
+            [ a [class "navbar-brand fs-2"] [ text "WordGame" ]
             , ul [ class "navbar-nav me-auto" ]
                 ( actions
                     |> List.map ( \item ->
@@ -36,11 +33,12 @@ navBar actions =
                         li [ class "nav-item" ]
                             [ a
                                 [ onClick msg
-                                , class "btn btn-light" ]
+                                , class "btn btn-light fs-4" ]
                                 [ text label ]
                             ]
                     )
                 )
+            , div [ class "navbar-nav mx-auto" ] [ stats model.answers ]
             ]
         ]
 
@@ -55,25 +53,10 @@ stage onAnimationComplete onAnswer ( width, height ) model =
         , style "background-color" "#eee"
         , style "margin-left" "-10px"
         ]
-        ( [ dumster ( height - 20 ) ]
-        ++
         ( model.stagedWords
-            |> List.map ( \word -> wordSprite onAnimationComplete onAnswer True word ) )
+            |> List.map ( \word -> wordSprite onAnimationComplete onAnswer True word )
         )
 
-
-dumster : Int -> Html msg
-dumster height =
-    div
-        [ class "position-absolute"
-        , style "left" "10px"
-        , style "top" "10px"
-        , style "width" ( px dumpster_inner_width )
-        , style "height" ( px height )
-        , style "border-radius" "5px"
-        , style "background-color" "#ddd"
-        ]
-        []
 
 wordSprite : (Word -> msg) -> (Word -> String -> msg) -> Bool -> Word -> Html msg
 wordSprite onAnimationComplete onAnswer animating word =
@@ -93,7 +76,7 @@ wordSprite onAnimationComplete onAnswer animating word =
             , style "top" ( px y )
             , style "color" "black"
             , class_
-            , on "animationend" ( Json.Decode.succeed ( onAnimationComplete word ) )
+            , onAnimationEnd ( onAnimationComplete word )
             ]
                 [ div [ class "badge bg-light text-dark rounded-pill"]
                     [ text word.text ]
@@ -105,22 +88,25 @@ answerBar : ( String -> msg ) -> Html msg
 answerBar onSelectAnswer =
     div [ class "d-flex mt-3" ]
         [ button
-            [ class "btn btn-light btn-lg bg-masculine text-light mx-1"
+            [ class "btn btn-light btn-lg bg-masculine text-light mx-1 fs-4"
             , style "width" "33.33%"
-            , style "height" "4.5em"
+            , style "height" "2.5em"
             , onClick ( onSelectAnswer "DER" )
+            , onTouchStart ( onSelectAnswer "DER" )
             ] [ text "DER" ]
         , button
-            [ class "btn btn-light btn-lg bg-feminine text-light mx-1"
+            [ class "btn btn-light btn-lg bg-feminine text-light mx-1 fs-4"
             , style "width" "33.33%"
-            , style "height" "4.5em"
+            , style "height" "2.5em"
             , onClick ( onSelectAnswer "DIE" )
+            , onTouchStart ( onSelectAnswer "DIE" )
             ] [ text "DIE" ]
         , button
-            [ class "btn btn-light btn-lg bg-neutrum text-light mx-1"
+            [ class "btn btn-light btn-lg bg-neutrum text-light mx-1 fs-4"
             , style "width" "33.33%"
-            , style "height" "4.5em"
+            , style "height" "2.5em"
             , onClick ( onSelectAnswer "DAS" )
+            , onTouchStart ( onSelectAnswer "DAS" )
             ] [ text "DAS" ]
         ]
 
@@ -130,11 +116,20 @@ stats answers =
         correctCount = answers |> List.foldl ( \item acc -> if item.correct then acc + 1 else acc ) 0
         wrongCount = answers |> List.foldl ( \item acc -> if not item.correct then acc + 1 else acc ) 0
     in
-    ul [ class "list-group list-group-horizontal" ]
-        [ li [ class "list-group-item w-50" ]
+    ul [ class "list-group list-group-horizontal text-nowrap" ]
+        [ li [ class "list-group-item w-50 fs-5" ]
             [ text ( "Correct: " ++ String.fromInt correctCount )
             ]
-        , li [ class "list-group-item w-50" ]
+        , li [ class "list-group-item w-50 fs-5" ]
             [ text ( "Wrong: " ++ String.fromInt wrongCount )
             ]
         ]
+
+
+onTouchStart : msg -> Attribute msg
+onTouchStart msg =
+    on "touchstart" ( Json.Decode.succeed msg )
+
+onAnimationEnd : msg -> Attribute msg
+onAnimationEnd msg =
+    on "animationend" ( Json.Decode.succeed msg )

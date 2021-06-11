@@ -18,6 +18,7 @@ module.exports = {
                 use: [
                     'style-loader',
                     'css-loader',
+                    'sass-loader',
                 ],
                 generator: {
                     filename: '[name]-[contenthash][ext]'

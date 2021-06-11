@@ -5,8 +5,8 @@ import Data exposing (Answer, GameStatus, Word)
 import Time
 
 dumpster_width = 620
-dumpster_inner_width = 600
-release_frequency = 0.6
+dumpster_inner_width = dumpster_width - 20
+release_frequency = 0.5
 
 
 type alias Model =
@@ -29,7 +29,6 @@ type Msg
     | StartGame
     | UpdateWordPosition ( List Word )
     | WordAnimationComplete Word
-    | SelectWord Word
     | SelectAnswer Word String
 
 
