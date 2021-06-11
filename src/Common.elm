@@ -4,10 +4,9 @@ import Browser.Dom as Browser
 import Data exposing (Answer, GameStatus, Word)
 import Time
 
-dumpster_width = 620
-dumpster_inner_width = dumpster_width - 20
-release_frequency = 0.5
-
+release_frequency = 0.7
+item_height = 232
+overflow_limit = 5
 
 type alias Model =
     { screensize: ( Float, Float )
@@ -15,7 +14,6 @@ type alias Model =
     , count : Int
     , words : List Word
     , stagedWords : List Word
-    , selectedWord : Maybe Word
     , answers : List Answer
     }
 
@@ -27,7 +25,7 @@ type Msg
     | SelectFile String
     | GotWordList ( List Word )
     | StartGame
-    | UpdateWordPosition ( List Word )
+    | ApplyRandomness ( List Word )
     | WordAnimationComplete Word
     | SelectAnswer Word String
 
@@ -62,3 +60,14 @@ getHi dim =
         (_, h) = dim
     in
     floor h
+
+
+updatePositions items =
+    items |> List.foldl ( \item { words, index } ->
+        if item.expired then { index = index, words = item :: words }
+        else
+            { index = index + 1
+            , words = { item | position = ( 0, index * item_height ) } :: words
+            }
+    ) { words = [], index = 0 }
+    |> (\{ words } -> words |> List.reverse )

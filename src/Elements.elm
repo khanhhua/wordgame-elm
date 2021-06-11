@@ -1,6 +1,6 @@
 module Elements exposing (..)
 
-import Common exposing (Model, dumpster_inner_width, getHi, getWi)
+import Common exposing (Model, getHi, getWi)
 import Data exposing (Answer, Word)
 import Json.Decode
 
@@ -90,21 +90,21 @@ answerBar onSelectAnswer =
             , style "width" "33.33%"
             , style "height" "2.5em"
             , onClick ( onSelectAnswer "DER" )
-            , onTouchStart ( onSelectAnswer "DER" )
+            --, onTouchStart ( onSelectAnswer "DER" )
             ] [ text "DER" ]
         , button
             [ class "btn btn-light btn-lg bg-feminine text-light mx-1 fs-4"
             , style "width" "33.33%"
             , style "height" "2.5em"
             , onClick ( onSelectAnswer "DIE" )
-            , onTouchStart ( onSelectAnswer "DIE" )
+            --, onTouchStart ( onSelectAnswer "DIE" )
             ] [ text "DIE" ]
         , button
             [ class "btn btn-light btn-lg bg-neutrum text-light mx-1 fs-4"
             , style "width" "33.33%"
             , style "height" "2.5em"
             , onClick ( onSelectAnswer "DAS" )
-            , onTouchStart ( onSelectAnswer "DAS" )
+            --, onTouchStart ( onSelectAnswer "DAS" )
             ] [ text "DAS" ]
         ]
 
@@ -123,6 +123,13 @@ stats answers =
             ]
         ]
 
+
+gameoverElement : Html msg
+gameoverElement =
+    div [ class "display-1 text-center fw-bold mt-50p" ]
+        [ text "GAME OVER!" ]
+
+-- FUNCTIONS
 
 stageSize : ( Float, Float ) -> ( Int, Int )
 stageSize screensize =
