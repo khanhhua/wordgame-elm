@@ -14,7 +14,7 @@ import Url
 import Common exposing (..)
 import Data exposing (..)
 import Data exposing (GameStatus(..), Word)
-import Elements exposing (action, answerBar, navBar, px, stage, stats)
+import Elements exposing (action, answerBar, navBar, px, stage, stageSize, stats)
 
 
 main : Program () Model Msg
@@ -53,13 +53,20 @@ update msg model =
             ( model, loadFileByName GotWordList fileName )
         GotWordList words ->
             let
-                leftX = 30
-                rightX = dumpster_inner_width - leftX * 4
-                randomizer = Random.map2 ( \orderings xs ->
-                        ( List.map3 (\a b word -> { ordering = a, position = ( b, 0 ), word = word })
+                count = List.length words
+                ( stageW, stageH ) = stageSize model.screensize
+                leftX = 10
+                rightX = stageW - 180
+                topY = 10
+                bottomY = stageH - 190
+
+                randomizer = Random.map3 ( \orderings xs ys ->
+                        ( List.map4 (\ordering word x y  -> { ordering = ordering, position = ( x, y ), word = word })
                             orderings
+                            words
                             xs
-                            words )
+                            ys
+                        )
                         |> List.sortBy (\item -> item.ordering)
                         |> List.map (\item ->
                             let
@@ -68,8 +75,9 @@ update msg model =
                                 { word | position = item.position }
                             )
                     )
-                    ( Random.list ( List.length words ) ( Random.float 0 1 ) )
-                    ( Random.list ( List.length words ) ( Random.int leftX rightX ) )
+                    ( Random.list count ( Random.float 0 1 ) )
+                    ( Random.list count ( Random.int leftX rightX ) )
+                    ( Random.list count ( Random.int topY bottomY ) )
             in
             ( { model
                 | count = words |> List.length
@@ -162,6 +170,10 @@ subscriptions model =
 
 view : Model -> Document Msg
 view model =
+    let
+        stageSize_ = stageSize model.screensize
+        ( colW, _ ) = stageSize_
+    in
     { title = "WordGame - ELM 2021"
     , body =
         [ model |> navBar
@@ -170,24 +182,12 @@ view model =
             ]
         , div [ class "container" ]
             [ div [ class "row" ]
-                [ div
-                    [ class "col-1 mx-auto"
-                    , style "width" ( px (getWi model.screensize - 200) )
-                    ]
-                    [ model |> stage
-                        WordAnimationComplete
-                        SelectAnswer
-                        ( (getWi model.screensize - 200), (getHi model.screensize - 200) )
-                    ]
+                [ model |> stage
+                    WordAnimationComplete
+                    SelectAnswer
+                    stageSize_
                 ]
             ]
         ]
     }
 
-
-getY : ( Int, Int ) -> Int
-getY position =
-    let
-        ( _, y ) = position
-    in
-    y

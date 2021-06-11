@@ -1,6 +1,6 @@
 module Elements exposing (..)
 
-import Common exposing (Model, dumpster_inner_width)
+import Common exposing (Model, dumpster_inner_width, getHi, getWi)
 import Data exposing (Answer, Word)
 import Json.Decode
 
@@ -49,9 +49,7 @@ stage onAnimationComplete onAnswer ( width, height ) model =
         [ class "stage"
         , style "width" ( px width )
         , style "height" ( px height )
-        , class "position-relative mt-1"
-        , style "background-color" "#eee"
-        , style "margin-left" "-10px"
+        , class "position-relative mt-1 mx-auto"
         ]
         ( model.stagedWords
             |> List.map ( \word -> wordSprite onAnimationComplete onAnswer True word )
@@ -124,6 +122,15 @@ stats answers =
             [ text ( "Wrong: " ++ String.fromInt wrongCount )
             ]
         ]
+
+
+stageSize : ( Float, Float ) -> ( Int, Int )
+stageSize screensize =
+    let
+        w = getWi screensize
+        h = getHi screensize
+    in
+    ( w - 200, h - 200 )
 
 
 onTouchStart : msg -> Attribute msg

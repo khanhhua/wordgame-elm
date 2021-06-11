@@ -1,17 +1,21 @@
 @keyframes tetrix {
   0% {
-    transform: translateY(0);
+    opacity: 100%;
+  }
+  50% {
+    opacity: 100%;
   }
   100% {
-    transform: translateY(1320px);
+    opacity: 0%;
   }
 }
 
 .animation-tetrix {
-  animation: tetrix 8500ms ease-in running forwards;
+  animation: tetrix 3500ms ease-in running forwards;
 }
 
 .stage {
+  background-color: #eee;
   overflow: hidden;
   border: 10px solid #6882b8;
   border-radius: 15px;
@@ -20,23 +24,36 @@
 .word-sprite {
   position: absolute;
   display: block;
-  font-size: 2rem;
+  font-size: 4rem;
   font-weight: 700;
 
   user-select: none;
   background-color: transparent;
 }
 
+$color-masculine: #3c82ea;
+$color-feminine: #cd2626;
+$color-neutrum: #0f9c8c;
+
 .bg-masculine {
-  background-color: #3c82ea;
+  background-color: $color-masculine;
+  &:hover, &:active {
+    background-color: lighten($color-masculine, 20%) !important;
+  }
 }
 
 .bg-feminine {
-  background-color: #cd2626;
+  background-color: $color-feminine;
+  &:hover, &:active {
+    background-color: lighten($color-feminine, 20%) !important;
+  }
 }
 
 .bg-neutrum {
-  background-color: #0f9c8c;
+  background-color: $color-neutrum;
+  &:hover, &:active {
+    background-color: lighten($color-neutrum, 20%) !important;
+  }
 }
 
 @media (min-width: 576px) {
