@@ -1,10 +1,9 @@
 module Elements exposing (..)
 
-import Common exposing (Model, getHi, getWi)
-import Data exposing (Answer, Word)
+import Common exposing (Answer, Collection, Model, Word, getHi, getWi)
 import Json.Decode
 
-import Html exposing (Attribute, Html, a, button, div, li, nav, span, text, ul)
+import Html exposing (Attribute, Html, a, button, div, h3, li, nav, p, span, text, ul)
 import Html.Attributes exposing (class, id, style)
 import Html.Events exposing (on, onClick)
 
@@ -124,10 +123,33 @@ stats answers =
         ]
 
 
-gameoverElement : Html msg
-gameoverElement =
+gameoverElement : msg -> Html msg
+gameoverElement onStartGame =
     div [ class "display-1 text-center fw-bold mt-50p" ]
-        [ text "GAME OVER!" ]
+        [ p [] [ text "GAME OVER!" ]
+        , button
+            [ onClick onStartGame
+            , class "btn btn-primary mt-5"
+            ] [ text "RESTART!" ]
+        ]
+
+collectionListElement : ( String -> msg ) -> msg -> Bool -> List Collection -> Html msg
+collectionListElement onSelectFile onClose shown collections =
+    div [ class (
+        "offcanvas offcanvas-start collection-list"
+        ++ ( if shown then " show visible" else "" ) )
+        ]
+        [ div [ class "d-flex justify-content-between" ]
+            [ h3 [ class "p-2" ] [ text "Collections" ]
+            , button [ class "btn btn-sm btn-dark m-1", onClick onClose ] [ text "Close" ]
+            ]
+        , ul [ class "list-group" ]
+            ( collections |> List.map ( \collection ->
+                li [ onClick ( collection.packageId ++ "/" ++ collection.file |> onSelectFile  )
+                    , class "list-group-item"
+                    ] [ text collection.name ]
+            ) )
+        ]
 
 -- FUNCTIONS
 

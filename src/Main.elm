@@ -6,15 +6,14 @@ import Browser.Navigation as Navigation
 
 import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (class, style)
-import Random exposing (initialSeed)
+import Random
 import Task
 import Time
 import Url
 
 import Common exposing (..)
 import Data exposing (..)
-import Data exposing (GameStatus(..), Word)
-import Elements exposing (action, gameoverElement, navBar, px, stage, stageSize, stats)
+import Elements exposing (action, collectionListElement, gameoverElement, navBar, stage, stageSize)
 
 
 main : Program () Model Msg
@@ -31,13 +30,12 @@ main =
 
 init : () -> Url.Url -> Navigation.Key -> ( Model, Cmd Msg )
 init () url key =
-    ( { screensize = dimension 0 0
-        , count = 0
-        , words = []
-        , stagedWords = []
-        , status = MENU
-        , answers = []
-        }, Task.perform SetScreenSize Browser.Dom.getViewport )
+    ( initModel
+    , Cmd.batch
+        [ Task.perform SetScreenSize Browser.Dom.getViewport
+        , loadCollectionsMetadata GotCollections
+        ]
+    )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -48,36 +46,17 @@ update msg model =
                 size = ( screen.viewport.width, screen.viewport.height )
             in
             ( { model | screensize = size } , Cmd.none )
+        GotCollections collections ->
+            ( { model | collections = collections |> List.append model.collections } , Cmd.none )
+        ShowCollection bool ->
+            ( { model | showingCollections = bool } , Cmd.none )
         SelectFile fileName ->
-            ( model, loadFileByName GotWordList fileName )
+            ( { model | showingCollections = False }, loadFileByName GotWordList fileName )
         GotWordList words ->
-            let
-                count = List.length words
-                ( stageW, stageH ) = stageSize model.screensize
-                leftX = 10
-                rightX = stageW - 180
-                topY = 10
-                bottomY = stageH - 190
-
-                randomizer = Random.map ( \orderings ->
-                        ( List.map2 (\ordering word  -> { ordering = ordering, position = ( 0, 0 ), word = word })
-                            orderings
-                            words
-                        )
-                        |> List.sortBy (\item -> item.ordering)
-                        |> List.map (\item ->
-                            let
-                                word = item.word
-                            in
-                                { word | position = item.position }
-                            )
-                    )
-                    ( Random.list count ( Random.float 0 1 ) )
-            in
             ( { model
                 | count = words |> List.length
                 , words = words
-                } , Random.generate ApplyRandomness randomizer
+                }, Cmd.none
             )
         ApplyRandomness words ->
             ( { model
@@ -86,17 +65,38 @@ update msg model =
             )
         StartGame ->
             let
-                next = model.words |> List.head
-                stagedWords = case next of
-                    Nothing -> model.stagedWords
-                    Just word -> word |> List.singleton
-                words = model.words |> List.tail |> Maybe.withDefault []
+                count = List.length model.words
+
+                randomizer = Random.map ( \orderings ->
+                    ( List.map2 (\ordering word  -> { ordering = ordering, position = ( 0, 0 ), word = word })
+                        orderings
+                        words
+                    )
+                    |> List.sortBy (\item -> item.ordering)
+                    |> List.map (\item ->
+                        let
+                            word = item.word
+                        in
+                            { word | position = item.position }
+                        )
+                    )
+                    ( Random.list count ( Random.float 0 1 ) )
+
+                stagedWords = []
+                words = if 0 == ( model.words |> List.length )
+                    then model.stagedWords |> List.map ( \item -> { item | expired = False })
+                    else model.words
             in
             ( { model
                 | words = words
                 , stagedWords = stagedWords
                 , status = IN_GAME
-                }, Cmd.none )
+                , answers = []
+                }, Random.generate ApplyRandomness randomizer )
+        PauseGame ->
+            ( { model | status = PAUSED }, Cmd.none )
+        ResumeGame ->
+            ( { model | status = IN_GAME }, Cmd.none )
         WordAnimationComplete key ->
             let
                 count = model.count - 1
@@ -179,13 +179,22 @@ view model =
     { title = "WordGame - ELM 2021"
     , body =
         [ model |> navBar
-            [ action "Start" StartGame
-            , action "Load" ( SelectFile "menschen/A2.txt" )
-            ]
+            ( [ action "Collections" ( ShowCollection True ) ] ++
+                ( if 0 == ( model.words |> List.length ) then []
+                    else
+                        ( case model.status of
+                            IN_GAME -> [ action "Pause" PauseGame ]
+                            PAUSED -> [ action "Resume" ResumeGame ]
+                            MENU -> [ action "Start" StartGame ]
+                            _ -> []
+                        )
+                )
+            )
+        , collectionListElement SelectFile ( ShowCollection False ) model.showingCollections model.collections
         , div [ class "container" ]
             [ div [ class "row" ]
                 ( if model.status == GAMEOVER
-                then [ gameoverElement ]
+                then [ gameoverElement StartGame ]
                 else
                     [ model |> stage
                         WordAnimationComplete

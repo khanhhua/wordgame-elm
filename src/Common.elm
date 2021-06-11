@@ -1,12 +1,39 @@
 module Common exposing (..)
 
 import Browser.Dom as Browser
-import Data exposing (Answer, GameStatus, Word)
 import Time
 
 release_frequency = 0.7
 item_height = 232
 overflow_limit = 5
+
+type Msg
+    = NoOp
+    | SetScreenSize Browser.Viewport
+    | Tick Time.Posix
+    | SelectFile String
+    | GotCollections ( List Collection )
+    | GotWordList ( List Word )
+    | StartGame
+    | PauseGame
+    | ResumeGame
+    | ApplyRandomness ( List Word )
+    | WordAnimationComplete Word
+    | SelectAnswer Word String
+    | ShowCollection Bool
+
+
+initModel : Model
+initModel =
+    { screensize = dimension 0 0
+    , status = MENU
+    , count = 0
+    , words = []
+    , stagedWords = []
+    , answers = []
+    , showingCollections = False
+    , collections = []
+    }
 
 type alias Model =
     { screensize: ( Float, Float )
@@ -15,19 +42,49 @@ type alias Model =
     , words : List Word
     , stagedWords : List Word
     , answers : List Answer
+    , showingCollections : Bool
+    , collections : List Collection
+    }
+
+type Gender
+    = MAS
+    | FEM
+    | NEU
+
+
+type alias Package =
+    { name : String
+    , collections : List Collection
+    }
+
+type alias Collection =
+    { packageId : String
+    , name : String
+    , file : String
+    }
+
+type alias Word =
+    { text : String
+    , meaning : String
+    , gender : Gender
+    , position : ( Int, Int )
+    , expired : Bool
     }
 
 
-type Msg
-    = NoOp
-    | SetScreenSize Browser.Viewport
-    | Tick Time.Posix
-    | SelectFile String
-    | GotWordList ( List Word )
-    | StartGame
-    | ApplyRandomness ( List Word )
-    | WordAnimationComplete Word
-    | SelectAnswer Word String
+type GameStatus
+    = MENU
+    | IN_GAME
+    | PAUSED
+    | ENDING
+    | GAMEOVER
+
+
+type alias Answer =
+    { text : String
+    , gender : Gender
+    , correct : Bool
+    }
 
 
 dimension : Float -> Float -> ( Float, Float )
