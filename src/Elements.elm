@@ -1,6 +1,6 @@
 module Elements exposing (..)
 
-import Common exposing (Model, dumpster_inner_width, getHi, getWi)
+import Common exposing (Model, getHi, getWi)
 import Data exposing (Answer, Word)
 import Json.Decode
 
@@ -22,8 +22,7 @@ navBar : List ( Action msg ) -> Model -> Html msg
 navBar actions model =
     nav [ class "navbar navbar-expand navbar-light bg-light" ]
         [ div [ class "container-fluid" ]
-            [ a [class "navbar-brand fs-2"] [ text "WordGame" ]
-            , ul [ class "navbar-nav me-auto" ]
+            [ ul [ class "navbar-nav me-auto" ]
                 ( actions
                     |> List.map ( \item ->
                         let
@@ -33,12 +32,13 @@ navBar actions model =
                         li [ class "nav-item" ]
                             [ a
                                 [ onClick msg
-                                , class "btn btn-light fs-4" ]
+                                , class "btn btn-outline-dark mx-1 fs-4" ]
                                 [ text label ]
                             ]
                     )
                 )
-            , div [ class "navbar-nav mx-auto" ] [ stats model.answers ]
+            , a [class "navbar-brand mx-auto fs-2"] [ text "WordGame" ]
+            , div [ class "navbar-nav mr-0" ] [ stats model.answers ]
             ]
         ]
 
@@ -90,21 +90,21 @@ answerBar onSelectAnswer =
             , style "width" "33.33%"
             , style "height" "2.5em"
             , onClick ( onSelectAnswer "DER" )
-            , onTouchStart ( onSelectAnswer "DER" )
+            --, onTouchStart ( onSelectAnswer "DER" )
             ] [ text "DER" ]
         , button
             [ class "btn btn-light btn-lg bg-feminine text-light mx-1 fs-4"
             , style "width" "33.33%"
             , style "height" "2.5em"
             , onClick ( onSelectAnswer "DIE" )
-            , onTouchStart ( onSelectAnswer "DIE" )
+            --, onTouchStart ( onSelectAnswer "DIE" )
             ] [ text "DIE" ]
         , button
             [ class "btn btn-light btn-lg bg-neutrum text-light mx-1 fs-4"
             , style "width" "33.33%"
             , style "height" "2.5em"
             , onClick ( onSelectAnswer "DAS" )
-            , onTouchStart ( onSelectAnswer "DAS" )
+            --, onTouchStart ( onSelectAnswer "DAS" )
             ] [ text "DAS" ]
         ]
 
@@ -123,6 +123,13 @@ stats answers =
             ]
         ]
 
+
+gameoverElement : Html msg
+gameoverElement =
+    div [ class "display-1 text-center fw-bold mt-50p" ]
+        [ text "GAME OVER!" ]
+
+-- FUNCTIONS
 
 stageSize : ( Float, Float ) -> ( Int, Int )
 stageSize screensize =

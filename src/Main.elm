@@ -14,7 +14,7 @@ import Url
 import Common exposing (..)
 import Data exposing (..)
 import Data exposing (GameStatus(..), Word)
-import Elements exposing (action, answerBar, navBar, px, stage, stageSize, stats)
+import Elements exposing (action, gameoverElement, navBar, px, stage, stageSize, stats)
 
 
 main : Program () Model Msg
@@ -36,7 +36,6 @@ init () url key =
         , words = []
         , stagedWords = []
         , status = MENU
-        , selectedWord = Nothing
         , answers = []
         }, Task.perform SetScreenSize Browser.Dom.getViewport )
 
@@ -60,12 +59,10 @@ update msg model =
                 topY = 10
                 bottomY = stageH - 190
 
-                randomizer = Random.map3 ( \orderings xs ys ->
-                        ( List.map4 (\ordering word x y  -> { ordering = ordering, position = ( x, y ), word = word })
+                randomizer = Random.map ( \orderings ->
+                        ( List.map2 (\ordering word  -> { ordering = ordering, position = ( 0, 0 ), word = word })
                             orderings
                             words
-                            xs
-                            ys
                         )
                         |> List.sortBy (\item -> item.ordering)
                         |> List.map (\item ->
@@ -76,15 +73,13 @@ update msg model =
                             )
                     )
                     ( Random.list count ( Random.float 0 1 ) )
-                    ( Random.list count ( Random.int leftX rightX ) )
-                    ( Random.list count ( Random.int topY bottomY ) )
             in
             ( { model
                 | count = words |> List.length
                 , words = words
-                } , Random.generate UpdateWordPosition randomizer
+                } , Random.generate ApplyRandomness randomizer
             )
-        UpdateWordPosition words ->
+        ApplyRandomness words ->
             ( { model
             | words = words
             } , Cmd.none
@@ -113,6 +108,7 @@ update msg model =
                         else
                             word
                     )
+                    |> updatePositions
             in
             ( { model
                 | count = count
@@ -136,6 +132,7 @@ update msg model =
                         else
                             word_
                     )
+                    |> updatePositions
             in
             ( { model
                 | answers = answers
@@ -146,7 +143,12 @@ update msg model =
                 next = model.words |> List.head
                 stagedWords = case next of
                     Nothing -> model.stagedWords
-                    Just word -> [word] |> List.append model.stagedWords
+                    Just word_ ->
+                        [word_]
+                        |> List.append model.stagedWords
+                        |> updatePositions
+                overflow = overflow_limit < ( stagedWords |> List.filter ( .expired >> not ) |> List.length )
+
                 words = model.words |> List.tail |> Maybe.withDefault []
                 status = if 0 == ( words |> List.length )
                     then ENDING
@@ -155,7 +157,7 @@ update msg model =
             ({ model
                 | words = words
                 , stagedWords = stagedWords
-                , status = status
+                , status = if overflow then GAMEOVER else status
                 } , Cmd.none )
         _ -> ( model, Cmd.none )
 
@@ -182,11 +184,15 @@ view model =
             ]
         , div [ class "container" ]
             [ div [ class "row" ]
-                [ model |> stage
-                    WordAnimationComplete
-                    SelectAnswer
-                    stageSize_
-                ]
+                ( if model.status == GAMEOVER
+                then [ gameoverElement ]
+                else
+                    [ model |> stage
+                        WordAnimationComplete
+                        SelectAnswer
+                        stageSize_
+                    ]
+                )
             ]
         ]
     }
