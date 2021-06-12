@@ -51,7 +51,13 @@ update msg model =
         ShowCollection bool ->
             ( { model | showingCollections = bool } , Cmd.none )
         SelectFile fileName ->
-            ( { model | showingCollections = False }, loadFileByName GotWordList fileName )
+            let
+                updatedModel = resetGame model
+            in
+            ( { updatedModel
+                | showingCollections = False
+                }
+            , loadFileByName GotWordList fileName )
         GotWordList words ->
             ( { model
                 | count = words |> List.length
@@ -60,8 +66,9 @@ update msg model =
             )
         ApplyRandomness words ->
             ( { model
-            | words = words
-            } , Cmd.none
+                | words = words
+                }
+            , Cmd.none
             )
         StartGame ->
             let

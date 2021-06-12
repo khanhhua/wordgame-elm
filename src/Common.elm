@@ -35,6 +35,14 @@ initModel =
     , collections = []
     }
 
+resetGame : Model -> Model
+resetGame model =
+    { model
+    | status = MENU
+    , stagedWords = []
+    , answers = []
+    }
+
 type alias Model =
     { screensize: ( Float, Float )
     , status : GameStatus

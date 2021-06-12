@@ -146,7 +146,7 @@ collectionListElement onSelectFile onClose shown collections =
         , ul [ class "list-group" ]
             ( collections |> List.map ( \collection ->
                 li [ onClick ( collection.packageId ++ "/" ++ collection.file |> onSelectFile  )
-                    , class "list-group-item"
+                    , class "list-group-item display-6"
                     ] [ text collection.name ]
             ) )
         ]
