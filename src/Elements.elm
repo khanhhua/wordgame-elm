@@ -1,9 +1,9 @@
 module Elements exposing (..)
 
-import Common exposing (Answer, Collection, Model, Word, getHi, getWi)
+import Common exposing (Answer, Collection, Model, Word, genderToString, getHi, getWi)
 import Json.Decode
 
-import Html exposing (Attribute, Html, a, button, div, h3, li, nav, p, span, text, ul)
+import Html exposing (Attribute, Html, a, button, div, h3, li, nav, p, span, table, tbody, td, text, th, thead, tr, ul)
 import Html.Attributes exposing (class, id, style)
 import Html.Events exposing (on, onClick)
 
@@ -19,7 +19,7 @@ action label msg =
 
 navBar : List ( Action msg ) -> Model -> Html msg
 navBar actions model =
-    nav [ class "navbar navbar-expand navbar-light bg-light" ]
+    nav [ class "navbar navbar-expand navbar-light bg-light sticky-top" ]
         [ div [ class "container-fluid" ]
             [ ul [ class "navbar-nav me-auto" ]
                 ( actions
@@ -129,8 +129,34 @@ gameoverElement onStartGame =
         [ p [] [ text "GAME OVER!" ]
         , button
             [ onClick onStartGame
-            , class "btn btn-primary mt-5"
+            , class "btn btn-primary rounded-pill mt-5 px-sm-5 display-1"
             ] [ text "RESTART!" ]
+        ]
+
+reportElement : List Answer -> Html msg
+reportElement answers =
+    if 0 == ( answers |> List.length )
+    then ( text "" )
+    else div [ class "col mx-auto mt-4" ]
+        [ table [ class "table display-6" ]
+            [ thead []
+                [ tr []
+                    [ th [] [ text "#" ]
+                    , th [] [ text "Word" ]
+                    , th [] [ text "Gender" ]
+                    , th [] [ text "Correct" ]
+                    ]
+                ]
+            , tbody [ class "font-monospace" ]
+                ( answers |> List.indexedMap ( \index answer ->
+                    tr []
+                        [ td [] [ text ( index |> ((+) 1) >> String.fromInt ) ]
+                        , td [] [ text answer.text ]
+                        , td [] [ text ( answer.gender |> genderToString ) ]
+                        , td [] [ text ( if answer.correct then "x" else "o" ) ]
+                        ]
+                ) )
+            ]
         ]
 
 collectionListElement : ( String -> msg ) -> msg -> Bool -> List Collection -> Html msg

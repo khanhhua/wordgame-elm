@@ -13,7 +13,7 @@ import Url
 
 import Common exposing (..)
 import Data exposing (..)
-import Elements exposing (action, collectionListElement, gameoverElement, navBar, stage, stageSize)
+import Elements exposing (action, collectionListElement, gameoverElement, navBar, reportElement, stage, stageSize)
 
 
 main : Program () Model Msg
@@ -140,10 +140,16 @@ update msg model =
                             word_
                     )
                     |> updatePositions
+                status = if
+                        0 == ( stagedWords |> List.filter ( .expired >> not ) |> List.length )
+                        && 0 == ( model.words |> List.length )
+                    then GAMEOVER
+                    else model.status
             in
             ( { model
                 | answers = answers
                 , stagedWords = stagedWords
+                , status = status
                 }, Cmd.none )
         Tick _ ->
             let
@@ -201,7 +207,9 @@ view model =
         , div [ class "container" ]
             [ div [ class "row" ]
                 ( if model.status == GAMEOVER
-                then [ gameoverElement StartGame ]
+                then [ gameoverElement StartGame
+                    , reportElement model.answers
+                    ]
                 else
                     [ model |> stage
                         WordAnimationComplete

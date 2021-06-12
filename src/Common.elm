@@ -136,3 +136,11 @@ updatePositions items =
             }
     ) { words = [], index = 0 }
     |> (\{ words } -> words |> List.reverse )
+
+
+genderToString : Gender -> String
+genderToString gender =
+    case gender of
+        MAS -> "MAS"
+        FEM -> "FEM"
+        NEU -> "NEU"
