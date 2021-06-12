@@ -21,7 +21,7 @@ navBar : List ( Action msg ) -> Model -> Html msg
 navBar actions model =
     nav [ class "navbar navbar-expand navbar-light bg-light sticky-top" ]
         [ div [ class "container-fluid" ]
-            [ ul [ class "navbar-nav me-auto" ]
+            [ ul [ class "col navbar-nav me-auto" ]
                 ( actions
                     |> List.map ( \item ->
                         let
@@ -36,8 +36,8 @@ navBar actions model =
                             ]
                     )
                 )
-            , a [class "navbar-brand mx-auto fs-2"] [ text "WordGame" ]
-            , div [ class "navbar-nav mr-0" ] [ stats model.answers ]
+            , a [class "col navbar-brand mx-auto fs-2 text-center"] [ text "WordGame" ]
+            , div [ class "col navbar-nav mr-0" ] [ stats model.answers ]
             ]
         ]
 
