@@ -7,7 +7,7 @@ import Html exposing (Attribute, Html, a, button, div, h3, li, nav, p, span, tab
 import Html.Attributes exposing (class, id, style)
 import Html.Events exposing (on, onClick)
 
-type Action msg = Action String msg
+type Action a = Action String a
 
 
 px : Int -> String

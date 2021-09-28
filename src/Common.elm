@@ -1,31 +1,25 @@
 module Common exposing (..)
 
 import Browser.Dom as Browser
-import Time
 
 release_frequency = 0.7
 item_height = 232
 overflow_limit = 5
 
-type Msg
+type Msg a
     = NoOp
     | SetScreenSize Browser.Viewport
-    | Tick Time.Posix
     | SelectFile String
     | GotCollections ( List Collection )
     | GotWordList ( List Word )
-    | StartGame
-    | PauseGame
-    | ResumeGame
-    | ApplyRandomness ( List Word )
-    | WordAnimationComplete Word
-    | SelectAnswer Word String
     | ShowCollection Bool
+    | GameMsg a
 
 
 initModel : Model
 initModel =
     { screensize = dimension 0 0
+    , game = GameGenderRace
     , status = MENU
     , count = 0
     , words = []
@@ -43,8 +37,15 @@ resetGame model =
     , answers = []
     }
 
+
+type Game
+    = GameGenderRace
+    | GameHangMan
+
+
 type alias Model =
     { screensize: ( Float, Float )
+    , game : Game
     , status : GameStatus
     , count : Int
     , words : List Word
