@@ -72,6 +72,10 @@ update msg model =
             let
                 ( updatedModel, grCmd ) = GR.update msg_ model
             in ( updatedModel, Cmd.map (GR >> GameMsg) grCmd )
+        GameMsg (HM msg_) ->
+            let
+                ( updatedModel, hmCmd ) = HM.update msg_ model
+            in ( updatedModel, Cmd.map (HM >> GameMsg) hmCmd )
         _ -> ( model, Cmd.none )
 
 
@@ -86,15 +90,23 @@ view : Model -> Document AppMsg
 view model =
     let
         stageSize_ = stageSize model.screensize
+        renderAppMenu =
+            case model.game of
+                GameGenderRace ->
+                    ((GR.appMenu model) |> List.map (\(Action label msg) -> Action label ((GameMsg << GR) msg)))
+                GameHangMan ->
+                    ((HM.appMenu model) |> List.map (\(Action label msg) -> Action label ((GameMsg << HM) msg)))
+        renderStage =
+            case model.game of
+                GameGenderRace -> GR.gameStage model |> Html.map (GameMsg << GR)
+                GameHangMan -> HM.gameStage model |> Html.map (GameMsg << HM)
         ( colW, _ ) = stageSize_
     in
     { title = "WordGame - ELM 2021"
     , body =
         [ model |> navBar
-            ( [ action "Collections" ( ShowCollection True ) ] ++
-                ((GR.appMenu model) |> List.map (\(Action label msg) -> Action label ((GameMsg << GR) msg)))
-            )
+            ( [ action "Collections" ( ShowCollection True ) ] ++ renderAppMenu )
         , collectionListElement SelectFile ( ShowCollection False ) model.showingCollections model.collections
-        , GR.gameStage model |> Html.map (GameMsg << GR)
+        , renderStage
         ]
     }

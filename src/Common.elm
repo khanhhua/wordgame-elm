@@ -1,6 +1,7 @@
 module Common exposing (..)
 
 import Browser.Dom as Browser
+import Html exposing (Html, text)
 
 release_frequency = 0.7
 item_height = 232
@@ -19,7 +20,7 @@ type Msg a
 initModel : Model
 initModel =
     { screensize = dimension 0 0
-    , game = GameGenderRace
+    , game = GameHangMan
     , status = MENU
     , count = 0
     , words = []
@@ -27,6 +28,7 @@ initModel =
     , answers = []
     , showingCollections = False
     , collections = []
+    , hiddenWord = Nothing
     }
 
 resetGame : Model -> Model
@@ -53,6 +55,7 @@ type alias Model =
     , answers : List Answer
     , showingCollections : Bool
     , collections : List Collection
+    , hiddenWord: Maybe HiddenWord
     }
 
 type Gender
@@ -78,6 +81,12 @@ type alias Word =
     , gender : Gender
     , position : ( Int, Int )
     , expired : Bool
+    }
+
+type alias HiddenWord =
+    { text : String
+    , displayedText: String
+    , hint : String
     }
 
 
@@ -145,3 +154,6 @@ genderToString gender =
         MAS -> "MAS"
         FEM -> "FEM"
         NEU -> "NEU"
+
+empty : Html msg
+empty = text ""
