@@ -17,7 +17,7 @@ action : String -> msg -> Action msg
 action label msg =
     Action label msg
 
-navBar : List ( Action msg ) -> Model -> Html msg
+navBar : List ( Action msg ) -> Model a -> Html msg
 navBar actions model =
     nav [ class "navbar navbar-expand navbar-light bg-light sticky-top" ]
         [ div [ class "container-fluid" ]
@@ -42,7 +42,7 @@ navBar actions model =
         ]
 
 
-stage : (Word -> msg) -> (Word -> String -> msg) -> ( Int, Int ) -> Model -> Html msg
+stage : (Word -> msg) -> (Word -> String -> msg) -> ( Int, Int ) -> Model a -> Html msg
 stage onAnimationComplete onAnswer ( width, height ) model =
     div
         [ class "stage"

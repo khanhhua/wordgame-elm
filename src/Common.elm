@@ -17,8 +17,8 @@ type Msg a
     | GameMsg a
 
 
-initModel : Model
-initModel =
+initModel : g -> Model g
+initModel gameModel =
     { screensize = dimension 0 0
     , game = GameHangMan
     , status = MENU
@@ -28,10 +28,10 @@ initModel =
     , answers = []
     , showingCollections = False
     , collections = []
-    , hiddenWord = Nothing
+    , gameModel = gameModel
     }
 
-resetGame : Model -> Model
+resetGame : Model g -> Model g
 resetGame model =
     { model
     | status = MENU
@@ -45,7 +45,7 @@ type Game
     | GameHangMan
 
 
-type alias Model =
+type alias Model g =
     { screensize: ( Float, Float )
     , game : Game
     , status : GameStatus
@@ -55,7 +55,7 @@ type alias Model =
     , answers : List Answer
     , showingCollections : Bool
     , collections : List Collection
-    , hiddenWord: Maybe HiddenWord
+    , gameModel : g
     }
 
 type Gender
@@ -82,13 +82,6 @@ type alias Word =
     , position : ( Int, Int )
     , expired : Bool
     }
-
-type alias HiddenWord =
-    { text : String
-    , displayedText: String
-    , hint : String
-    }
-
 
 type GameStatus
     = MENU

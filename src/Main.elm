@@ -20,7 +20,11 @@ type GameMsg
     | HM HMMsg
 type alias AppMsg = Msg GameMsg
 
-main : Program () Model AppMsg
+type GameModel
+    = GameModelGR {}
+    | GameModelHM HM.HMModel
+
+main : Program () (Model GameModel) AppMsg
 main =
   Browser.application
     { init = init
@@ -32,9 +36,9 @@ main =
     }
 
 
-init : () -> Url.Url -> Navigation.Key -> ( Model, Cmd AppMsg )
+init : () -> Url.Url -> Navigation.Key -> ( Model GameModel, Cmd AppMsg )
 init () url key =
-    ( initModel
+    ( initModel ( GameModelHM HM.initModel )
     , Cmd.batch
         [ Task.perform SetScreenSize Browser.Dom.getViewport
         , loadCollectionsMetadata GotCollections
@@ -42,7 +46,7 @@ init () url key =
     )
 
 
-update : AppMsg -> Model -> ( Model, Cmd AppMsg )
+update : AppMsg -> Model GameModel -> ( Model GameModel, Cmd AppMsg )
 update msg model =
     case msg of
         SetScreenSize screen ->
@@ -66,7 +70,9 @@ update msg model =
             ( { model
                 | count = words |> List.length
                 , words = words
-                }, Cmd.none
+                }, Task.perform (\words_ ->
+                    GameMsg (HM (HM.LoadWords words_))
+                ) (Task.succeed words)
             )
         GameMsg (GR msg_) ->
             let
@@ -74,19 +80,27 @@ update msg model =
             in ( updatedModel, Cmd.map (GR >> GameMsg) grCmd )
         GameMsg (HM msg_) ->
             let
-                ( updatedModel, hmCmd ) = HM.update msg_ model
-            in ( updatedModel, Cmd.map (HM >> GameMsg) hmCmd )
+                ( updatedModel, cmd ) = case model.gameModel of
+                    GameModelHM gameModel ->
+                        let
+                            ( gameModel_, hmCmd ) = HM.update msg_ gameModel
+                        in
+                        ( { model | gameModel = GameModelHM gameModel_ }
+                        , Cmd.map (HM >> GameMsg) hmCmd
+                        )
+                    _ -> ( model, Cmd.none )
+            in ( updatedModel,  cmd )
         _ -> ( model, Cmd.none )
 
 
-subscriptions : Model -> Sub AppMsg
+subscriptions : Model a -> Sub AppMsg
 subscriptions model =
     case model.game of
         GameGenderRace -> Sub.map (GR >> GameMsg) (GR.subscriptions model)
         GameHangMan -> Sub.map (HM >> GameMsg) (HM.subscriptions model)
 
 
-view : Model -> Document AppMsg
+view : Model GameModel -> Document AppMsg
 view model =
     let
         stageSize_ = stageSize model.screensize
@@ -95,11 +109,27 @@ view model =
                 GameGenderRace ->
                     ((GR.appMenu model) |> List.map (\(Action label msg) -> Action label ((GameMsg << GR) msg)))
                 GameHangMan ->
-                    ((HM.appMenu model) |> List.map (\(Action label msg) -> Action label ((GameMsg << HM) msg)))
+                    let
+                        hmModel = case model.gameModel of
+                            GameModelHM model_ -> Just model_
+                            _ -> Nothing
+                    in
+                    hmModel
+                        |> Maybe.map (HM.appMenu >> List.map (\(Action label msg) -> Action label ((GameMsg << HM) msg)))
+                        |> Maybe.withDefault []
         renderStage =
             case model.game of
                 GameGenderRace -> GR.gameStage model |> Html.map (GameMsg << GR)
-                GameHangMan -> HM.gameStage model |> Html.map (GameMsg << HM)
+                GameHangMan ->
+                    let
+                        hmModel = case model.gameModel of
+                            GameModelHM model_ -> Just model_
+                            _ -> Nothing
+                    in
+                    hmModel
+                        |> Maybe.map (HM.gameStage >> Html.map (GameMsg << HM))
+                        |> Maybe.withDefault empty
+
         ( colW, _ ) = stageSize_
     in
     { title = "WordGame - ELM 2021"

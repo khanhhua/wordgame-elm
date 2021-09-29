@@ -26,7 +26,7 @@ type GRMsg
     | GrNoOp
 
 
-update : GRMsg -> Model -> ( Model, Cmd GRMsg)
+update : GRMsg -> Model a -> ( Model a, Cmd GRMsg)
 update msg model =
     case msg of
         ApplyRandomness words ->
@@ -140,7 +140,7 @@ update msg model =
         _ -> ( model, Cmd.none )
 
 
-subscriptions : Model -> Sub GRMsg
+subscriptions : Model a -> Sub GRMsg
 subscriptions model =
     if model.status == IN_GAME then
         Sub.batch [ Time.every (1/release_frequency * 1000) Tick ]
@@ -148,7 +148,7 @@ subscriptions model =
         Sub.none
 
 
-appMenu : Model -> List (Action GRMsg)
+appMenu : Model a -> List (Action GRMsg)
 appMenu model =
     if 0 == ( model.words |> List.length ) then []
     else
@@ -160,7 +160,7 @@ appMenu model =
         )
 
 
-gameStage : Model -> Html GRMsg
+gameStage : Model a -> Html GRMsg
 gameStage model =
     let
         stageSize_ = stageSize model.screensize

@@ -1,24 +1,20 @@
 module Hangman exposing (..)
 
 import Array
-import Browser exposing (Document)
-import Browser.Dom
-import Browser.Navigation as Navigation
-import Common exposing (GameStatus(..), HiddenWord, Model, Msg(..), Word, empty, initModel, release_frequency)
-import Data exposing (loadCollectionsMetadata)
+import Common exposing (GameStatus(..), Model, Msg(..), Word, empty)
 import Elements exposing (Action, action, gameoverElement, reportElement, stageSize)
 import Html exposing (Html, div, input, p, text)
 import Html.Attributes exposing (class, disabled, maxlength, value)
 import Json.Decode as Json
 import Random
-import Task
+import Set exposing (Set)
 import Time
-import Url
-import Html.Events exposing (keyCode, on, onInput)
+import Html.Events exposing (on)
 
 type HMMsg
     = HMNoOp
     | ApplyRandomness ( List Word )
+    | LoadWords ( List Word )
     | StartGame
     | PauseGame
     | ResumeGame
@@ -26,16 +22,59 @@ type HMMsg
     | PickWrong
     | Tick Time.Posix
 
-update : HMMsg -> Model -> ( Model, Cmd HMMsg )
+type alias HiddenWord =
+    { text : String
+    , displayedIndices: List Bool
+    , hint : String
+    }
+
+type alias HMModel =
+    { hiddenWord : Maybe HiddenWord
+    , words : List Word
+    , stagedWords : List Word -- Used words
+    , status : GameStatus
+    , answers : List Word
+    , gallowStatus : List GallowStatus
+    }
+
+
+type GallowStatus
+    = Noose
+    | Head
+    | Body
+    | LeftHand
+    | RightHand
+    | LeftLeg
+    | RightLeg
+    | Dead
+
+
+executionSequence = [ Noose, Head, Body, LeftHand, RightHand, LeftLeg, RightLeg, Dead ] |> Array.fromList
+
+
+initModel : HMModel
+initModel =
+    { hiddenWord = Nothing
+    , words = []
+    , stagedWords = []
+    , status = MENU
+    , answers = []
+    , gallowStatus = []
+    }
+
+
+update : HMMsg -> HMModel -> ( HMModel, Cmd HMMsg )
 update msg model =
     case msg of
+        LoadWords words ->
+            ( { model | words = words }, Cmd.none )
         ApplyRandomness words ->
             ( { model
                 | words = words
                 , hiddenWord = List.head words
                     |> Maybe.map (\word ->
                         { text = word.text |> String.toLower
-                        , displayedText = String.repeat ( String.length word.text ) "_"
+                        , displayedIndices = List.repeat ( String.length word.text ) False
                         , hint = word.meaning
                         })
                 }
@@ -76,32 +115,40 @@ update msg model =
             ( { model | status = IN_GAME }, Cmd.none )
         PickCharacter char ->
             let
-                updateDisplayText word =
+                updateDisplayIndices : HiddenWord -> List Bool
+                updateDisplayIndices word =
                     let
                         text_      = word.text |> String.toList |> Array.fromList
-                        displayed_ = word.displayedText  |> String.toList |> Array.fromList
+                        displayed_ = word.displayedIndices |> Array.fromList
                     in
                     List.range 0 ((Array.length text_) - 1)
                         |> List.map (\index ->
                             ( Maybe.map2
-                                (\t d ->
+                                (\t currentlyDisplayed ->
                                     if (String.fromChar t) == char
-                                    then t
-                                    else d
+                                    then True
+                                    else currentlyDisplayed
                                 )
                                 (Array.get index text_)
                                 (Array.get index displayed_)
-                            ) |> Maybe.withDefault '_'
+                            ) |> Maybe.withDefault False
                         )
-                        |> String.fromList
-                hiddenWord =  model.hiddenWord
+                hiddenWord = model.hiddenWord
                     |> Maybe.map (\word ->
-                        let
-                            displayedText_ = updateDisplayText word
-                        in
-                        { word | displayedText = displayedText_ })
+                        { word | displayedIndices = updateDisplayIndices word }
+                    )
             in
             ( { model | hiddenWord = hiddenWord }
+            , Cmd.none )
+        PickWrong ->
+            let
+                nextStatus = executionSequence
+                    |> Array.get (List.length model.gallowStatus)
+                gallowStatus = case nextStatus of
+                    Just status -> model.gallowStatus |> (::) status
+                    Nothing -> model.gallowStatus
+            in
+            ( { model | gallowStatus = gallowStatus }
             , Cmd.none )
         --Tick _ ->
         --    let
@@ -133,7 +180,7 @@ subscriptions model =
         Sub.none
 
 
-appMenu : Model -> List (Action HMMsg)
+appMenu : HMModel -> List (Action HMMsg)
 appMenu model =
     if 0 == ( model.words |> List.length ) then []
     else
@@ -144,7 +191,7 @@ appMenu model =
             _ -> []
         )
 
-gameStage : Model -> Html HMMsg
+gameStage : HMModel -> Html HMMsg
 gameStage model =
     let
         currentWord = model.hiddenWord
@@ -153,7 +200,7 @@ gameStage model =
         [ div [ class "row" ]
             ( if model.status == GAMEOVER
             then [ gameoverElement StartGame
-                , reportElement model.answers
+                --, reportElement model.answers
                 ]
             else [
                 currentWord
@@ -161,11 +208,12 @@ gameStage model =
                     div [ class "col-12" ]
                         [ hiddenBoxes PickWrong PickCharacter word
                         , div []
-                            [ p [] [ text word.hint ]
+                            [ p [ class "text-center display-2" ] [ text word.hint ]
                             ]
                         ]
                     )
                 |> Maybe.withDefault empty
+                , gallowElement model.gallowStatus
                 ]
             )
         ]
@@ -173,22 +221,33 @@ gameStage model =
 hiddenBoxes : HMMsg -> (String -> HMMsg) -> HiddenWord -> Html HMMsg
 hiddenBoxes incorrectChoice pickCharacter hiddenWord =
     let
-        fnDisabled text i =
-            text
-            |> String.toList |> Array.fromList |> Array.get i
-            |> Maybe.map ((/=) '_')
-            |> Maybe.withDefault True
+        fnDisabled i =
+            hiddenWord.displayedIndices
+            |> Array.fromList
+            |> Array.get i
+        fnVisibleChatAt i =
+            hiddenWord.displayedIndices
+            |> Array.fromList
+            |> Array.get i
+            |> Maybe.andThen (\visible ->
+                if not visible then Just "_"
+                else hiddenWord.text
+                    |> String.toList
+                    |> Array.fromList
+                    |> Array.get i
+                    |> Maybe.map String.fromChar
+            )
+        keydownDecoder = (Json.string |> Json.andThen (String.toLower >> Json.succeed))
     in
     div [ class "hidden-boxes" ]
         [ div [ class "input-group hangman-hidden-word mx-auto" ]
-            ( hiddenWord.displayedText
-            |> String.toList
-            |> List.indexedMap (\index char ->
+            ( hiddenWord.displayedIndices
+            |> List.indexedMap (\index displayed ->
                 input
-                    [ disabled (fnDisabled hiddenWord.displayedText index)
+                    [ disabled (fnDisabled index |> Maybe.withDefault True)
                     , maxlength 1
                     , class "form-control form-control-lg"
-                    , value ( String.fromChar char )
+                    , value ( fnVisibleChatAt index |> Maybe.withDefault "_" )
                     , on "keydown" (Json.map (\enteredKey ->
                         let
                             charS : Maybe String
@@ -205,8 +264,27 @@ hiddenBoxes incorrectChoice pickCharacter hiddenWord =
                                 else incorrectChoice
                             )
                         |> Maybe.withDefault incorrectChoice
-                    ) (Json.field "key" Json.string |> (Json.andThen (String.toLower >> Json.succeed) )))
+                    ) (Json.field "key" keydownDecoder))
                     ] []
                 )
             )
         ]
+
+
+gallowElement : List GallowStatus -> Html msg
+gallowElement stati =
+    div [ class "gallow" ]
+        ( stati |> List.foldl (\item acc ->
+            let
+                d = case item of
+                    Noose -> div [ class "gallow-noose" ] []
+                    Head -> div [ class "gallow-head" ] []
+                    Body -> div [ class "gallow-body" ] []
+                    LeftHand -> div [ class "gallow-left-hand" ] []
+                    RightHand -> div [ class "gallow-right-hand" ] []
+                    LeftLeg -> div [ class "gallow-left-leg" ] []
+                    RightLeg -> div [ class "gallow-right-leg" ] []
+                    Dead -> div [ class "gallow-dead" ] []
+            in (d :: acc)
+            ) []
+        )

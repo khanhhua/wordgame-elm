@@ -92,3 +92,66 @@ $color-neutrum: #0f9c8c;
     }
   }
 }
+
+.gallow {
+  position: relative;
+
+  > div {
+    position: absolute;
+    background-color: black;
+    display: block;
+  }
+}
+
+.gallow-noose {
+  width: 5px;
+  height: 20px;
+  left: 15px;
+}
+
+.gallow-head {
+  width: 20px;
+  top: 24px;
+  height: 20px;
+  border-radius: 50%;
+  left: 7px;
+}
+
+.gallow-body {
+  width: 10px;
+  top: 45px;
+  height: 25px;
+}
+
+.gallow-left-hand {
+  width: 5px;
+  height: 20px;
+  top: 48px;
+  transform: rotate(45deg);
+  left: 2px;
+}
+
+.gallow-right-hand {
+  width: 5px;
+  top: 48px;
+  transform: rotate(138deg);
+  height: 20px;
+  left: 27px;
+}
+
+.gallow-left-leg {
+  width: 5px;
+  height: 20px;
+  top: 71px;
+  transform: rotate(12deg);
+}
+
+.gallow-right-leg {
+  width: 5px;
+  height: 20px;
+  top: 71px;
+  transform: rotate(335deg);
+  left: 23px;
+}
+
+.gallow-dead { }
