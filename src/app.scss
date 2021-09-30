@@ -95,11 +95,17 @@ $color-neutrum: #0f9c8c;
 
 .gallow {
   position: relative;
+  transform: scale(3.5);
+  transform-origin: 0 0;
+  width: 0;
+  margin: auto;
 
   > div {
+    display: block;
     position: absolute;
     background-color: black;
-    display: block;
+
+    transition: all 1s ease-in;
   }
 }
 
@@ -115,43 +121,91 @@ $color-neutrum: #0f9c8c;
   height: 20px;
   border-radius: 50%;
   left: 7px;
+
+  &::before, &::after {
+    content: "";
+    position: absolute;
+    display: block;
+    background-color: white;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+  }
+  &::before {
+    left: 3px;
+    top: 5px;
+  }
+  &::after {
+    left: 10px;
+    top: 5px;
+  }
+
+  .gallow.dead & {
+    &::before, &::after {
+      background-color: #999;
+      transform: scale(0.1);
+      transform-origin: center;
+    }
+  }
 }
 
 .gallow-body {
   width: 10px;
   top: 45px;
   height: 25px;
+  left: 12px;
 }
 
 .gallow-left-hand {
   width: 5px;
   height: 20px;
-  top: 48px;
-  transform: rotate(45deg);
-  left: 2px;
+  top: 45px;
+  left: 6px;
+  transform: rotate(15deg);
+  transform-origin: top right;
+
+  .gallow.dead & {
+    transform: rotate(1deg);
+  }
 }
 
 .gallow-right-hand {
   width: 5px;
-  top: 48px;
-  transform: rotate(138deg);
+  top: 45px;
+  transform: rotate(313deg);
   height: 20px;
-  left: 27px;
+  left: 23px;
+  transform-origin: left top;
+
+  .gallow.dead & {
+    transform: rotate(360deg);
+  }
 }
 
 .gallow-left-leg {
   width: 5px;
   height: 20px;
   top: 71px;
+  left: 11px;
   transform: rotate(12deg);
+  transform-origin: top left;
+
+  .gallow.dead & {
+    transform: rotate(0);
+  }
 }
 
 .gallow-right-leg {
   width: 5px;
   height: 20px;
   top: 71px;
+  left: 18px;
   transform: rotate(335deg);
-  left: 23px;
+  transform-origin: top right;
+
+  .gallow.dead & {
+    transform: rotate(360deg);
+  }
 }
 
 .gallow-dead { }
