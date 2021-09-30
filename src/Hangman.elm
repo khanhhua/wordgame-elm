@@ -3,8 +3,8 @@ module Hangman exposing (..)
 import Array
 import Common exposing (GameStatus(..), Model, Msg(..), Word, empty)
 import Elements exposing (Action, action, gameoverElement, reportElement, stageSize)
-import Html exposing (Html, button, div, input, p, text)
-import Html.Attributes exposing (class, disabled, maxlength, value)
+import Html exposing (Html, button, div, input, p, span, text)
+import Html.Attributes exposing (class, disabled, maxlength, tabindex, value)
 import Json.Decode as Json
 import Random
 import Set exposing (Set)
@@ -247,8 +247,27 @@ gameStage model =
     let
         currentWord = model.hiddenWord
         showingResult = model.showingResult
+        keydownDecoder = (Json.string |> Json.andThen (String.toLower >> Json.succeed))
     in
-    div [ class "container" ]
+    div [ class "container"
+        , tabindex 1
+        , on "keydown" (Json.map (\maybeEnteredKey ->
+            maybeEnteredKey
+            |> Maybe.andThen (\enteredKey ->
+                currentWord
+                |> Maybe.map (\word ->
+                    if (String.contains enteredKey word.text)
+                        then PickCharacter enteredKey
+                        else PickWrong
+                    )
+                )
+            |> Maybe.withDefault HMNoOp
+            ) (Json.map2
+                (\filteringKey key -> if String.length filteringKey > 1 then Nothing else Just key)
+                (Json.field "key" Json.string)
+                (Json.field "key" keydownDecoder)
+            ))
+        ]
         [ div [ class "row" ]
             ( if model.status == GAMEOVER
             then [ gameoverElement StartGame
@@ -257,7 +276,7 @@ gameStage model =
             else [ currentWord
                     |> Maybe.map (\word ->
                         div [ class "col-8" ]
-                            [ hiddenBoxes PickWrong PickCharacter word
+                            [ hiddenBoxes word
                             , div []
                                 [ p [ class "text-center display-2" ] [ text word.hint ]
                                 ]
@@ -280,8 +299,8 @@ gameStage model =
             )
         ]
 
-hiddenBoxes : HMMsg -> (String -> HMMsg) -> HiddenWord -> Html HMMsg
-hiddenBoxes incorrectChoice pickCharacter hiddenWord =
+hiddenBoxes : HiddenWord -> Html HMMsg
+hiddenBoxes hiddenWord =
     let
         fnDisabled i =
             hiddenWord.displayedIndices
@@ -299,35 +318,16 @@ hiddenBoxes incorrectChoice pickCharacter hiddenWord =
                     |> Array.get i
                     |> Maybe.map String.fromChar
             )
-        keydownDecoder = (Json.string |> Json.andThen (String.toLower >> Json.succeed))
     in
     div [ class "hidden-boxes" ]
         [ div [ class "input-group hangman-hidden-word mx-auto" ]
             ( hiddenWord.displayedIndices
             |> List.indexedMap (\index displayed ->
-                input
+                span
                     [ disabled (fnDisabled index |> Maybe.withDefault True)
                     , maxlength 1
                     , class "form-control form-control-lg"
-                    , value ( fnVisibleChatAt index |> Maybe.withDefault "_" )
-                    , on "keydown" (Json.map (\enteredKey ->
-                        let
-                            charS : Maybe String
-                            charS = hiddenWord.text
-                                |> String.toList
-                                |> Array.fromList
-                                |> Array.get index
-                                |> Maybe.map String.fromChar
-                        in
-                        charS
-                        |> Maybe.map (\charS_ ->
-                            if (enteredKey |> String.toLower) == charS_
-                                then pickCharacter enteredKey
-                                else incorrectChoice
-                            )
-                        |> Maybe.withDefault incorrectChoice
-                    ) (Json.field "key" keydownDecoder))
-                    ] []
+                    ] [ text ( fnVisibleChatAt index |> Maybe.withDefault "_" ) ]
                 )
             )
         ]
