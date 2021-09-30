@@ -51,7 +51,7 @@ type GallowStatus
     | Dead
 
 
-executionSequence = [ Noose, Head, Body, LeftHand, RightHand, LeftLeg, RightLeg, Dead ] |> Array.fromList
+executionSequence = [ Head, Body, LeftHand, RightHand, LeftLeg, RightLeg, Noose, Dead ] |> Array.fromList
 
 
 initModel : HMModel
@@ -73,11 +73,13 @@ update msg model =
             ( { model | words = words }, Cmd.none )
         ApplyRandomness words ->
             let
-                  head = model.words |> List.head
-                  tail = model.words |> List.tail
+                  head = words |> List.head
+                  tail = words |> List.tail
+                  stagedWords = head |> Maybe.map (\w -> w :: model.stagedWords ) |> Maybe.withDefault []
             in
             ( { model
-                | words = tail |> Maybe.withDefault []
+                | stagedWords = stagedWords
+                , words = tail |> Maybe.withDefault []
                 , hiddenWord = head
                     |> Maybe.map (\word ->
                         { text = word.text |> String.toLower
@@ -89,7 +91,7 @@ update msg model =
             )
         StartGame ->
             let
-                count = List.length model.words
+                count = List.length model.words + List.length model.stagedWords
                 randomizer = Random.map ( \orderings ->
                     ( List.map2 (\ordering word  -> { ordering = ordering, position = ( 0, 0 ), word = word })
                         orderings
@@ -107,10 +109,10 @@ update msg model =
 
                 stagedWords = []
                 words = if 0 == ( model.words |> List.length )
-                    then model.stagedWords |> List.map ( \item -> { item | expired = False })
+                    then model.stagedWords
                     else model.words
             in
-            ( { model
+            ( { initModel
                 | words = words
                 , stagedWords = stagedWords
                 , status = IN_GAME
@@ -184,9 +186,11 @@ update msg model =
             let
                 head = model.words |> List.head
                 tail = model.words |> List.tail
+                stagedWords = head |> Maybe.map (\w -> w :: model.stagedWords ) |> Maybe.withDefault []
             in
             ( { model
-                | words = tail |> Maybe.withDefault []
+                | stagedWords = stagedWords
+                , words = tail |> Maybe.withDefault []
                 , hiddenWord = head
                     |> Maybe.map (\word ->
                         { text = word.text |> String.toLower
@@ -263,19 +267,17 @@ gameStage model =
                 , div [ class "col-4" ]
                     [ gallowElement model.gallowStatus
                     ]
+                , if showingResult
+                    then ( div [ class "col-8 text-center"]
+                        [ button
+                            [ class "btn btn-lg btn-primary"
+                            , onClick NextWord
+                            ] [ text "Next"]
+                        ]
+                    )
+                    else empty
                 ]
             )
-        , if showingResult
-            then ( div [ class "row" ]
-                [ div [ class "col-4 mx-auto"]
-                    [ button
-                        [ class "btn btn-lg btn-primary"
-                        , onClick NextWord
-                        ] [ text "Next"]
-                    ]
-                ]
-             )
-             else empty
         ]
 
 hiddenBoxes : HMMsg -> (String -> HMMsg) -> HiddenWord -> Html HMMsg
@@ -319,7 +321,7 @@ hiddenBoxes incorrectChoice pickCharacter hiddenWord =
                         in
                         charS
                         |> Maybe.map (\charS_ ->
-                            if ((Debug.log "enteredKey" enteredKey) |> String.toLower) == charS_
+                            if (enteredKey |> String.toLower) == charS_
                                 then pickCharacter enteredKey
                                 else incorrectChoice
                             )
