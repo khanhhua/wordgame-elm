@@ -13,7 +13,7 @@ import Url
 
 import Common exposing (..)
 import Data exposing (..)
-import Elements exposing (Action(..), action, collectionListElement, gameoverElement, navBar, reportElement, stage, stageSize)
+import Elements exposing (Action(..), action, collectionListElement, navBar, stageSize)
 
 type GameMsg
     = GR GRMsg
@@ -21,7 +21,7 @@ type GameMsg
 type alias AppMsg = Msg GameMsg
 
 type GameModel
-    = GameModelGR {}
+    = GameModelGR GR.GRModel
     | GameModelHM HM.HMModel
 
 main : Program () (Model GameModel) AppMsg
@@ -38,7 +38,7 @@ main =
 
 init : () -> Url.Url -> Navigation.Key -> ( Model GameModel, Cmd AppMsg )
 init () url key =
-    ( initModel ( GameModelHM HM.initModel )
+    ( initModel ( GameModelGR GR.initModel )
     , Cmd.batch
         [ Task.perform SetScreenSize Browser.Dom.getViewport
         , loadCollectionsMetadata GotCollections
@@ -71,13 +71,23 @@ update msg model =
                 | count = words |> List.length
                 , words = words
                 }, Task.perform (\words_ ->
-                    GameMsg (HM (HM.LoadWords words_))
+                    case model.game of
+                        GameHangMan -> GameMsg (HM (HM.LoadWords words_))
+                        GameGenderRace -> GameMsg (GR (GR.LoadWords words_))
                 ) (Task.succeed words)
             )
         GameMsg (GR msg_) ->
             let
-                ( updatedModel, grCmd ) = GR.update msg_ model
-            in ( updatedModel, Cmd.map (GR >> GameMsg) grCmd )
+                ( updatedModel, cmd ) = case model.gameModel of
+                    GameModelGR gameModel ->
+                        let
+                            ( gameModel_, grCmd ) = GR.update msg_ gameModel
+                        in
+                        ( { model | gameModel = GameModelGR gameModel_ }
+                        , Cmd.map (GR >> GameMsg) grCmd
+                        )
+                    _ -> ( model, Cmd.none )
+            in ( updatedModel,  cmd )
         GameMsg (HM msg_) ->
             let
                 ( updatedModel, cmd ) = case model.gameModel of
@@ -93,11 +103,17 @@ update msg model =
         _ -> ( model, Cmd.none )
 
 
-subscriptions : Model a -> Sub AppMsg
+subscriptions : Model GameModel -> Sub AppMsg
 subscriptions model =
     case model.game of
-        GameGenderRace -> Sub.map (GR >> GameMsg) (GR.subscriptions model)
-        GameHangMan -> Sub.map (HM >> GameMsg) (HM.subscriptions model)
+        GameGenderRace ->
+            case model.gameModel of
+                GameModelGR gameModel_ -> Sub.map (GR >> GameMsg) (GR.subscriptions gameModel_)
+                _ -> Sub.none
+        GameHangMan ->
+            case model.gameModel of
+                GameModelHM gameModel_ -> Sub.map (HM >> GameMsg) (HM.subscriptions gameModel_)
+                _ -> Sub.none
 
 
 view : Model GameModel -> Document AppMsg
@@ -107,35 +123,40 @@ view model =
         renderAppMenu =
             case model.game of
                 GameGenderRace ->
-                    ((GR.appMenu model) |> List.map (\(Action label msg) -> Action label ((GameMsg << GR) msg)))
+                    case model.gameModel of
+                        GameModelGR model_ ->
+                            model_
+                            |> GR.appMenu >> List.map (\(Action label msg) -> Action label ((GameMsg << GR) msg))
+                        _ -> []
                 GameHangMan ->
-                    let
-                        hmModel = case model.gameModel of
-                            GameModelHM model_ -> Just model_
-                            _ -> Nothing
-                    in
-                    hmModel
-                        |> Maybe.map (HM.appMenu >> List.map (\(Action label msg) -> Action label ((GameMsg << HM) msg)))
-                        |> Maybe.withDefault []
+                    case model.gameModel of
+                        GameModelHM model_ ->
+                            model_
+                            |> HM.appMenu >> List.map (\(Action label msg) -> Action label ((GameMsg << HM) msg))
+                        _ -> []
+
         renderStage =
             case model.game of
-                GameGenderRace -> GR.gameStage model |> Html.map (GameMsg << GR)
+                GameGenderRace ->
+                    case model.gameModel of
+                        GameModelGR model_ ->
+                            model_ |> GR.gameStage model.screensize >> Html.map (GameMsg << GR)
+                        _ -> empty
                 GameHangMan ->
-                    let
-                        hmModel = case model.gameModel of
-                            GameModelHM model_ -> Just model_
-                            _ -> Nothing
-                    in
-                    hmModel
-                        |> Maybe.map (HM.gameStage >> Html.map (GameMsg << HM))
-                        |> Maybe.withDefault empty
+                    case model.gameModel of
+                        GameModelHM model_ ->
+                            model_ |> HM.gameStage >> Html.map (GameMsg << HM)
+                        _ -> empty
 
-        ( colW, _ ) = stageSize_
+        getAnswers =
+            case model.gameModel of
+                GameModelGR model_ -> model_.answers
+                GameModelHM model_ -> model_.answers
     in
     { title = "WordGame - ELM 2021"
     , body =
-        [ model |> navBar
-            ( [ action "Collections" ( ShowCollection True ) ] ++ renderAppMenu )
+        [ getAnswers
+            |> navBar ( [ action "Collections" ( ShowCollection True ) ] ++ renderAppMenu )
         , collectionListElement SelectFile ( ShowCollection False ) model.showingCollections model.collections
         , renderStage
         ]

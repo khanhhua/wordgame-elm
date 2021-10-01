@@ -1,7 +1,7 @@
 module Hangman exposing (..)
 
 import Array
-import Common exposing (GameStatus(..), Model, Msg(..), Word, empty)
+import Common exposing (Answer, GameStatus(..), Model, Msg(..), Word, empty)
 import Elements exposing (Action, action, gameoverElement, reportElement, stageSize)
 import Html exposing (Html, button, div, input, p, span, text)
 import Html.Attributes exposing (class, disabled, maxlength, tabindex, value)
@@ -35,7 +35,7 @@ type alias HMModel =
     , words : List Word
     , stagedWords : List Word -- Used words
     , status : GameStatus
-    , answers : List Word
+    , answers : List Answer
     , gallowStatus : List GallowStatus
     }
 
@@ -146,7 +146,7 @@ update msg model =
                     |> Maybe.map (\word ->
                         { word | displayedIndices = updateDisplayIndices word }
                     )
-                showingResult = hiddenWord
+                isCorrect = hiddenWord
                     |> Maybe.map (\word ->
                         0 == ( word.displayedIndices
                                 |> List.filter ((==) False)
@@ -154,14 +154,26 @@ update msg model =
                             )
                     )
                     |> Maybe.withDefault False
-                status = if showingResult && (List.length model.words == 0)
+                answers = if isCorrect
+                    then model.stagedWords
+                        |> List.head
+                        |> Maybe.map (\word -> { text = word.text
+                                               , gender = word.gender
+                                               , correct = True
+                                               } :: model.answers
+                           )
+                        |> Maybe.withDefault model.answers
+                    else model.answers
+
+                status = if isCorrect && (List.length model.words == 0)
                     then GAMEOVER
                     else model.status
             in
             ( { model
                 | hiddenWord = hiddenWord
-                , showingResult = showingResult
+                , showingResult = isCorrect
                 , status = status
+                , answers = answers
             }
             , Cmd.none )
         PickWrong ->
@@ -171,15 +183,26 @@ update msg model =
                 gallowStatus = case nextStatus of
                     Just status -> model.gallowStatus |> (::) status
                     Nothing -> model.gallowStatus
-                showingResult = ( List.length gallowStatus ) == ( Array.length executionSequence )
-                status_ = if showingResult && (List.length model.words == 0)
+                isLost = ( List.length gallowStatus ) == ( Array.length executionSequence )
+                answers = if isLost
+                    then model.stagedWords
+                        |> List.head
+                        |> Maybe.map (\word -> { text = word.text
+                                               , gender = word.gender
+                                               , correct = False
+                                               } :: model.answers
+                           )
+                       |> Maybe.withDefault model.answers
+                   else model.answers
+                status_ = if isLost && (List.length model.words == 0)
                     then GAMEOVER
                     else model.status
             in
             ( { model
                 | gallowStatus = gallowStatus
-                , showingResult = showingResult
+                , showingResult = isLost
                 , status = status_
+                , answers = answers
             }
             , Cmd.none )
         NextWord ->
@@ -271,7 +294,7 @@ gameStage model =
         [ div [ class "row" ]
             ( if model.status == GAMEOVER
             then [ gameoverElement StartGame
-                --, reportElement model.answers
+                , reportElement model.answers
                 ]
             else [ currentWord
                     |> Maybe.map (\word ->

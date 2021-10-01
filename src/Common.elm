@@ -20,24 +20,16 @@ type Msg a
 initModel : g -> Model g
 initModel gameModel =
     { screensize = dimension 0 0
-    , game = GameHangMan
-    , status = MENU
+    , game = GameGenderRace
     , count = 0
-    , words = []
-    , stagedWords = []
-    , answers = []
     , showingCollections = False
     , collections = []
     , gameModel = gameModel
+    , words = []
     }
 
 resetGame : Model g -> Model g
-resetGame model =
-    { model
-    | status = MENU
-    , stagedWords = []
-    , answers = []
-    }
+resetGame model = model
 
 
 type Game
@@ -48,11 +40,8 @@ type Game
 type alias Model g =
     { screensize: ( Float, Float )
     , game : Game
-    , status : GameStatus
     , count : Int
     , words : List Word
-    , stagedWords : List Word
-    , answers : List Answer
     , showingCollections : Bool
     , collections : List Collection
     , gameModel : g

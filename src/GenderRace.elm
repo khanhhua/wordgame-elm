@@ -1,22 +1,17 @@
 module GenderRace exposing (..)
 
-import Browser exposing (Document)
-import Browser.Dom
-import Browser.Navigation as Navigation
-
 import Html exposing (Html, button, div, text)
-import Html.Attributes exposing (class, style)
+import Html.Attributes exposing (class, id, style)
+import Html.Events exposing (onClick)
 import Random
-import Task
 import Time
-import Url
 
 import Common exposing (..)
-import Data exposing (..)
-import Elements exposing (Action, action, collectionListElement, gameoverElement, navBar, reportElement, stage, stageSize)
+import Elements exposing (Action, action, gameoverElement, onAnimationEnd, px, reportElement, stageSize)
 
 type GRMsg
     = ApplyRandomness (List Word)
+    | LoadWords ( List Word )
     | StartGame
     | PauseGame
     | ResumeGame
@@ -26,9 +21,30 @@ type GRMsg
     | GrNoOp
 
 
-update : GRMsg -> Model a -> ( Model a, Cmd GRMsg)
+type alias GRModel =
+    { status : GameStatus
+    , count : Int
+    , words : List Word
+    , stagedWords : List Word
+    , answers : List Answer
+    }
+
+
+initModel : GRModel
+initModel =
+    { status = MENU
+    , count = 0
+    , words = []
+    , stagedWords = []
+    , answers = []
+    }
+
+
+update : GRMsg -> GRModel -> ( GRModel, Cmd GRMsg)
 update msg model =
     case msg of
+        LoadWords words ->
+            ( { model | words = words }, Cmd.none )
         ApplyRandomness words ->
             ( { model
                 | words = words
@@ -140,7 +156,7 @@ update msg model =
         _ -> ( model, Cmd.none )
 
 
-subscriptions : Model a -> Sub GRMsg
+subscriptions : GRModel -> Sub GRMsg
 subscriptions model =
     if model.status == IN_GAME then
         Sub.batch [ Time.every (1/release_frequency * 1000) Tick ]
@@ -148,7 +164,7 @@ subscriptions model =
         Sub.none
 
 
-appMenu : Model a -> List (Action GRMsg)
+appMenu : GRModel -> List (Action GRMsg)
 appMenu model =
     if 0 == ( model.words |> List.length ) then []
     else
@@ -160,12 +176,8 @@ appMenu model =
         )
 
 
-gameStage : Model a -> Html GRMsg
-gameStage model =
-    let
-        stageSize_ = stageSize model.screensize
-        ( colW, _ ) = stageSize_
-    in
+gameStage : (Float, Float) -> GRModel -> Html GRMsg
+gameStage stageSize model =
     div [ class "container" ]
         [ div [ class "row" ]
             ( if model.status == GAMEOVER
@@ -176,7 +188,73 @@ gameStage model =
                 [ model |> stage
                     WordAnimationComplete
                     SelectAnswer
-                    stageSize_
+                    stageSize
                 ]
             )
+        ]
+
+
+stage : (Word -> msg) -> (Word -> String -> msg) -> ( Float, Float ) -> GRModel -> Html msg
+stage onAnimationComplete onAnswer ( width, height ) model =
+    div
+        [ class "stage"
+        , style "width" ( px width )
+        , style "height" ( px height )
+        , class "position-relative mt-1 mx-auto"
+        ]
+        ( model.stagedWords
+            |> List.map ( \word -> wordSprite onAnimationComplete onAnswer True word )
+        )
+
+
+wordSprite : (Word -> msg) -> (Word -> String -> msg) -> Bool -> Word -> Html msg
+wordSprite onAnimationComplete onAnswer animating word =
+    let
+        (x, y) = word.position
+        class_ = class ( if animating
+            then "word-sprite animation-tetrix"
+            else "word-sprite" )
+        onSelectAnswer = onAnswer word
+    in
+    if word.expired then
+        text ""
+    else
+        div
+            [ id word.text
+            , style "left" ( px (toFloat x) )
+            , style "top" ( px (toFloat y ) )
+            , style "color" "black"
+            , class_
+            , onAnimationEnd ( onAnimationComplete word )
+            ]
+                [ div [ class "badge bg-light text-dark rounded-pill"]
+                    [ text word.text ]
+                , answerBar onSelectAnswer
+                ]
+
+
+answerBar : ( String -> msg ) -> Html msg
+answerBar onSelectAnswer =
+    div [ class "d-flex mt-3" ]
+        [ button
+            [ class "btn btn-light btn-lg bg-masculine text-light mx-1 fs-4"
+            , style "width" "33.33%"
+            , style "height" "2.5em"
+            , onClick ( onSelectAnswer "DER" )
+            --, onTouchStart ( onSelectAnswer "DER" )
+            ] [ text "DER" ]
+        , button
+            [ class "btn btn-light btn-lg bg-feminine text-light mx-1 fs-4"
+            , style "width" "33.33%"
+            , style "height" "2.5em"
+            , onClick ( onSelectAnswer "DIE" )
+            --, onTouchStart ( onSelectAnswer "DIE" )
+            ] [ text "DIE" ]
+        , button
+            [ class "btn btn-light btn-lg bg-neutrum text-light mx-1 fs-4"
+            , style "width" "33.33%"
+            , style "height" "2.5em"
+            , onClick ( onSelectAnswer "DAS" )
+            --, onTouchStart ( onSelectAnswer "DAS" )
+            ] [ text "DAS" ]
         ]
