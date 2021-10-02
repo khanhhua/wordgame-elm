@@ -14,13 +14,14 @@ type Msg a
     | GotCollections ( List Collection )
     | GotWordList ( List Word )
     | ShowCollection Bool
+    | SelectGame Int
     | GameMsg a
 
 
 initModel : g -> Model g
 initModel gameModel =
     { screensize = dimension 0 0
-    , game = GameGenderRace
+    , game = Nothing
     , count = 0
     , showingCollections = False
     , collections = []
@@ -39,7 +40,7 @@ type Game
 
 type alias Model g =
     { screensize: ( Float, Float )
-    , game : Game
+    , game : Maybe Game
     , count : Int
     , words : List Word
     , showingCollections : Bool
