@@ -37,10 +37,10 @@ navBar actions onSelectGame =
                     )
                 )
             , a [class "col navbar-brand mx-auto fs-2 text-center"] [ text "WordGame" ]
-            , div [ class "col navbar-nav mr-0" ]
+            , div [ class "col navbar-nav mr-0 flex-row-reverse" ]
                 ( onSelectGame
                     |> Maybe.map (\onSelectGame_ ->
-                        [ button [ class "btn btn-sm btn-default", onClick onSelectGame_ ] [ text "Back" ] ]
+                        [ button [ class "btn btn-outline-dark", onClick onSelectGame_ ] [ text "Back" ] ]
                         )
                     |> Maybe.withDefault []
                 )
