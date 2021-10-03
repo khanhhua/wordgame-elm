@@ -18,14 +18,14 @@ type Msg a
     | GameMsg a
 
 
-initModel : g -> Model g
-initModel gameModel =
+initModel : Model g
+initModel =
     { screensize = dimension 0 0
     , game = Nothing
     , count = 0
     , showingCollections = False
     , collections = []
-    , gameModel = gameModel
+    , gameModel = Nothing
     , words = []
     }
 
@@ -45,7 +45,7 @@ type alias Model g =
     , words : List Word
     , showingCollections : Bool
     , collections : List Collection
-    , gameModel : g
+    , gameModel : Maybe g
     }
 
 type Gender

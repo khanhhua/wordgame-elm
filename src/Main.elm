@@ -40,7 +40,7 @@ main =
 
 init : () -> Url.Url -> Navigation.Key -> ( Model GameModel, Cmd AppMsg )
 init () url key =
-    ( initModel ( GameModelGR GR.initModel )
+    ( initModel
     , Cmd.batch
         [ Task.perform SetScreenSize Browser.Dom.getViewport
         , loadCollectionsMetadata GotCollections
@@ -83,46 +83,60 @@ update msg model =
                     |> Maybe.withDefault Cmd.none
 
             )
+        SelectGame gameId ->
+            case gameId of
+                1 ->
+                    ( { model
+                        | game = Just GameGenderRace
+                        , gameModel = GameModelGR GR.initModel |> Just }, Cmd.none )
+                2 ->
+                    ( { model
+                        | game = Just GameHangMan
+                        , gameModel = GameModelHM HM.initModel |> Just }, Cmd.none )
+                _ -> ( { model | game = Nothing }, Cmd.none )
         GameMsg (GR msg_) ->
             let
-                ( updatedModel, cmd ) = case model.gameModel of
-                    GameModelGR gameModel ->
-                        let
-                            ( gameModel_, grCmd ) = GR.update msg_ gameModel
-                        in
-                        ( { model | gameModel = GameModelGR gameModel_ }
-                        , Cmd.map (GR >> GameMsg) grCmd
+                ( updatedModel, cmd ) = model.gameModel
+                    |> Maybe.map (\gm ->
+                        case gm of
+                            GameModelGR gameModel ->
+                                let
+                                    ( gameModel_, grCmd ) = GR.update msg_ gameModel
+                                in
+                                ( { model | gameModel = GameModelGR gameModel_  |> Just }
+                                , Cmd.map (GR >> GameMsg) grCmd
+                                )
+                            _ -> ( model, Cmd.none )
+
                         )
-                    _ -> ( model, Cmd.none )
+                    |> Maybe.withDefault ( model, Cmd.none )
             in ( updatedModel,  cmd )
         GameMsg (HM msg_) ->
             let
-                ( updatedModel, cmd ) = case model.gameModel of
-                    GameModelHM gameModel ->
-                        let
-                            ( gameModel_, hmCmd ) = HM.update msg_ gameModel
-                        in
-                        ( { model | gameModel = GameModelHM gameModel_ }
-                        , Cmd.map (HM >> GameMsg) hmCmd
+                ( updatedModel, cmd ) = model.gameModel
+                    |> Maybe.map (\gm ->
+                        case gm of
+                            GameModelHM gameModel ->
+                                let
+                                    ( gameModel_, hmCmd ) = HM.update msg_ gameModel
+                                in
+                                ( { model | gameModel = GameModelHM gameModel_ |> Just }
+                                , Cmd.map (HM >> GameMsg) hmCmd
+                                )
+                            _ -> ( model, Cmd.none )
                         )
-                    _ -> ( model, Cmd.none )
+                    |> Maybe.withDefault ( model, Cmd.none )
             in ( updatedModel,  cmd )
         _ -> ( model, Cmd.none )
 
 
 subscriptions : Model GameModel -> Sub AppMsg
 subscriptions model =
-    model.game
-    |> Maybe.map (\game_ ->
-        case game_ of
-            GameGenderRace ->
-                case model.gameModel of
-                    GameModelGR gameModel_ -> Sub.map (GR >> GameMsg) (GR.subscriptions gameModel_)
-                    _ -> Sub.none
-            GameHangMan ->
-                case model.gameModel of
-                    GameModelHM gameModel_ -> Sub.map (HM >> GameMsg) (HM.subscriptions gameModel_)
-                    _ -> Sub.none
+    model.gameModel
+    |> Maybe.map (\gameModel ->
+        case gameModel of
+            GameModelGR gameModel_ -> Sub.map (GR >> GameMsg) (GR.subscriptions gameModel_)
+            GameModelHM gameModel_ -> Sub.map (HM >> GameMsg) (HM.subscriptions gameModel_)
         )
     |> Maybe.withDefault Sub.none
 
@@ -151,58 +165,40 @@ view model =
     let
         appMenuActions =
             let
-                actions = model.game
+                actions = model.gameModel
                     |> Maybe.map (\game_ ->
                         case game_ of
-                            GameGenderRace ->
-                                case model.gameModel of
-                                    GameModelGR model_ ->
-                                        model_
-                                        |> GR.appMenu >> List.map (\(Action label msg) -> Action label ((GameMsg << GR) msg))
-                                    _ -> []
-                            GameHangMan ->
-                                case model.gameModel of
-                                    GameModelHM model_ ->
-                                        model_
-                                        |> HM.appMenu >> List.map (\(Action label msg) -> Action label ((GameMsg << HM) msg))
-                                    _ -> []
-                    )
+                            GameModelGR model_ ->
+                                model_
+                                |> GR.appMenu >> List.map (\(Action label msg) -> Action label ((GameMsg << GR) msg))
+                            GameModelHM model_ ->
+                                model_
+                                |> HM.appMenu >> List.map (\(Action label msg) -> Action label ((GameMsg << HM) msg))
+                        )
                     |> Maybe.withDefault []
             in
             [ action "Collections" ( ShowCollection True ) ] ++ actions
 
         renderStage =
-            model.game
-            |> Maybe.map (\game_ ->
-                case game_ of
-                    GameGenderRace ->
-                        case model.gameModel of
-                            GameModelGR model_ ->
-                                model_ |> GR.gameStage model.screensize >> Html.map (GameMsg << GR)
-                            _ -> empty
-                    GameHangMan ->
-                        case model.gameModel of
-                            GameModelHM model_ ->
-                                model_ |> HM.gameStage >> Html.map (GameMsg << HM)
-                            _ -> empty
+            model.gameModel
+            |> Maybe.map (\gameModel ->
+                case gameModel of
+                    GameModelGR model_ ->
+                        model_ |> GR.gameStage model.screensize >> Html.map (GameMsg << GR)
+                    GameModelHM model_ ->
+                        model_ |> HM.gameStage >> Html.map (GameMsg << HM)
                 )
             |> Maybe.withDefault empty
-
-        getAnswers =
-            case model.gameModel of
-                GameModelGR model_ -> model_.answers
-                GameModelHM model_ -> model_.answers
     in
     { title = "WordGame - ELM 2021"
     , body =
         if model.game == Nothing
         then
-            [ navBar [] []
+            [ navBar [] Nothing
             , chooseGameType SelectGame
             ]
         else
-            [ getAnswers
-                |> navBar appMenuActions
+            [ navBar appMenuActions (Just ( SelectGame 0 ))
             , collectionListElement SelectFile ( ShowCollection False ) model.showingCollections model.collections
             , renderStage
             ]

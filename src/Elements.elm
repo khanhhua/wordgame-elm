@@ -17,8 +17,8 @@ action : String -> msg -> Action msg
 action label msg =
     Action label msg
 
-navBar : List ( Action msg ) -> List Answer -> Html msg
-navBar actions answers =
+navBar : List ( Action msg ) -> Maybe msg -> Html msg
+navBar actions onSelectGame =
     nav [ class "navbar navbar-expand navbar-light bg-light sticky-top" ]
         [ div [ class "container-fluid" ]
             [ ul [ class "col navbar-nav me-auto" ]
@@ -37,7 +37,13 @@ navBar actions answers =
                     )
                 )
             , a [class "col navbar-brand mx-auto fs-2 text-center"] [ text "WordGame" ]
-            , div [ class "col navbar-nav mr-0" ] [ stats answers ]
+            , div [ class "col navbar-nav mr-0" ]
+                ( onSelectGame
+                    |> Maybe.map (\onSelectGame_ ->
+                        [ button [ class "btn btn-sm btn-default", onClick onSelectGame_ ] [ text "Back" ] ]
+                        )
+                    |> Maybe.withDefault []
+                )
             ]
         ]
 
