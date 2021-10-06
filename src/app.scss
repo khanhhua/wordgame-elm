@@ -10,6 +10,12 @@
   }
 }
 
+@media (min-width: 768px) {
+  .container-md-fluid {
+    max-width: 100%;
+  }
+}
+
 .animation-tetrix {
   animation: tetrix 8s ease-in running forwards;
 }
@@ -73,4 +79,145 @@ $color-neutrum: #0f9c8c;
   .display-1 {
     font-size: calc(1.625rem + 4.5vw) !important;
   }
+}
+
+.hidden-boxes {
+
+}
+
+.input-group.hangman-hidden-word {
+  justify-content: center;
+
+  .form-control {
+    flex: 4rem 0 0;
+    text-transform: uppercase;
+    text-align: center;
+
+    &:disabled {
+      background-color: var(--bs-cyan);
+    }
+  }
+}
+
+.gallow {
+  position: relative;
+  transform: scale(3.5);
+  transform-origin: 0 0;
+  width: 0;
+  margin: auto;
+
+  > div {
+    display: block;
+    position: absolute;
+    background-color: black;
+
+    transition: all 1s ease-in;
+  }
+}
+
+.gallow-noose {
+  width: 1px;
+  height: 20px;
+  left: 15px;
+}
+
+.gallow-head {
+  width: 20px;
+  top: 24px;
+  height: 20px;
+  border-radius: 50%;
+  left: 7px;
+
+  &::before, &::after {
+    content: "";
+    position: absolute;
+    display: block;
+    background-color: white;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+  }
+  &::before {
+    left: 3px;
+    top: 5px;
+  }
+  &::after {
+    left: 10px;
+    top: 5px;
+  }
+
+  .gallow.dead & {
+    &::before, &::after {
+      background-color: #999;
+      transform: scale(0.1);
+      transform-origin: center;
+    }
+  }
+}
+
+.gallow-body {
+  width: 10px;
+  top: 45px;
+  height: 25px;
+  left: 12px;
+}
+
+.gallow-left-hand {
+  width: 5px;
+  height: 20px;
+  top: 45px;
+  left: 6px;
+  transform: rotate(15deg);
+  transform-origin: top right;
+
+  .gallow.dead & {
+    transform: rotate(1deg);
+  }
+}
+
+.gallow-right-hand {
+  width: 5px;
+  top: 45px;
+  transform: rotate(313deg);
+  height: 20px;
+  left: 23px;
+  transform-origin: left top;
+
+  .gallow.dead & {
+    transform: rotate(360deg);
+  }
+}
+
+.gallow-left-leg {
+  width: 5px;
+  height: 20px;
+  top: 71px;
+  left: 11px;
+  transform: rotate(12deg);
+  transform-origin: top left;
+
+  .gallow.dead & {
+    transform: rotate(0);
+  }
+}
+
+.gallow-right-leg {
+  width: 5px;
+  height: 20px;
+  top: 71px;
+  left: 18px;
+  transform: rotate(335deg);
+  transform-origin: top right;
+
+  .gallow.dead & {
+    transform: rotate(360deg);
+  }
+}
+
+.gallow-dead { }
+
+.keyboard .btn {
+  width: 3rem;
+  height: 3rem;
+  text-transform: uppercase;
 }

@@ -27,7 +27,7 @@ loadFileByName toMsg fileName =
         }
 
 
-loadCollectionsMetadata : ( List Collection -> Msg ) -> Cmd Msg
+loadCollectionsMetadata : ( List Collection -> Msg a) -> Cmd (Msg a)
 loadCollectionsMetadata toMsg =
     let
         fileUrls = List.map ( \name -> ( name, name ++ "/package.json" |> withBaseUrl )) collections

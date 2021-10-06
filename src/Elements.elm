@@ -7,18 +7,18 @@ import Html exposing (Attribute, Html, a, button, div, h3, li, nav, p, span, tab
 import Html.Attributes exposing (class, id, style)
 import Html.Events exposing (on, onClick)
 
-type Action msg = Action String msg
+type Action a = Action String a
 
 
-px : Int -> String
-px l = ( String.fromInt l ) ++ "px"
+px : Float -> String
+px l = ( String.fromFloat l ) ++ "px"
 
 action : String -> msg -> Action msg
 action label msg =
     Action label msg
 
-navBar : List ( Action msg ) -> Model -> Html msg
-navBar actions model =
+navBar : List ( Action msg ) -> Maybe msg -> Html msg
+navBar actions onSelectGame =
     nav [ class "navbar navbar-expand navbar-light bg-light sticky-top" ]
         [ div [ class "container-fluid" ]
             [ ul [ class "col navbar-nav me-auto" ]
@@ -37,75 +37,16 @@ navBar actions model =
                     )
                 )
             , a [class "col navbar-brand mx-auto fs-2 text-center"] [ text "WordGame" ]
-            , div [ class "col navbar-nav mr-0" ] [ stats model.answers ]
+            , div [ class "col navbar-nav mr-0 flex-row-reverse" ]
+                ( onSelectGame
+                    |> Maybe.map (\onSelectGame_ ->
+                        [ button [ class "btn btn-outline-dark", onClick onSelectGame_ ] [ text "Back" ] ]
+                        )
+                    |> Maybe.withDefault []
+                )
             ]
         ]
 
-
-stage : (Word -> msg) -> (Word -> String -> msg) -> ( Int, Int ) -> Model -> Html msg
-stage onAnimationComplete onAnswer ( width, height ) model =
-    div
-        [ class "stage"
-        , style "width" ( px width )
-        , style "height" ( px height )
-        , class "position-relative mt-1 mx-auto"
-        ]
-        ( model.stagedWords
-            |> List.map ( \word -> wordSprite onAnimationComplete onAnswer True word )
-        )
-
-
-wordSprite : (Word -> msg) -> (Word -> String -> msg) -> Bool -> Word -> Html msg
-wordSprite onAnimationComplete onAnswer animating word =
-    let
-        (x, y) = word.position
-        class_ = class ( if animating
-            then "word-sprite animation-tetrix"
-            else "word-sprite" )
-        onSelectAnswer = onAnswer word
-    in
-    if word.expired then
-        text ""
-    else
-        div
-            [ id word.text
-            , style "left" ( px x )
-            , style "top" ( px y )
-            , style "color" "black"
-            , class_
-            , onAnimationEnd ( onAnimationComplete word )
-            ]
-                [ div [ class "badge bg-light text-dark rounded-pill"]
-                    [ text word.text ]
-                , answerBar onSelectAnswer
-                ]
-
-
-answerBar : ( String -> msg ) -> Html msg
-answerBar onSelectAnswer =
-    div [ class "d-flex mt-3" ]
-        [ button
-            [ class "btn btn-light btn-lg bg-masculine text-light mx-1 fs-4"
-            , style "width" "33.33%"
-            , style "height" "2.5em"
-            , onClick ( onSelectAnswer "DER" )
-            --, onTouchStart ( onSelectAnswer "DER" )
-            ] [ text "DER" ]
-        , button
-            [ class "btn btn-light btn-lg bg-feminine text-light mx-1 fs-4"
-            , style "width" "33.33%"
-            , style "height" "2.5em"
-            , onClick ( onSelectAnswer "DIE" )
-            --, onTouchStart ( onSelectAnswer "DIE" )
-            ] [ text "DIE" ]
-        , button
-            [ class "btn btn-light btn-lg bg-neutrum text-light mx-1 fs-4"
-            , style "width" "33.33%"
-            , style "height" "2.5em"
-            , onClick ( onSelectAnswer "DAS" )
-            --, onTouchStart ( onSelectAnswer "DAS" )
-            ] [ text "DAS" ]
-        ]
 
 stats : List Answer -> Html msg
 stats answers =

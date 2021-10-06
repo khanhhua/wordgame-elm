@@ -1,57 +1,51 @@
 module Common exposing (..)
 
 import Browser.Dom as Browser
-import Time
+import Html exposing (Html, text)
 
 release_frequency = 0.7
 item_height = 232
 overflow_limit = 5
 
-type Msg
+type Msg a
     = NoOp
     | SetScreenSize Browser.Viewport
-    | Tick Time.Posix
     | SelectFile String
     | GotCollections ( List Collection )
     | GotWordList ( List Word )
-    | StartGame
-    | PauseGame
-    | ResumeGame
-    | ApplyRandomness ( List Word )
-    | WordAnimationComplete Word
-    | SelectAnswer Word String
     | ShowCollection Bool
+    | SelectGame Int
+    | GameMsg a
 
 
-initModel : Model
+initModel : Model g
 initModel =
     { screensize = dimension 0 0
-    , status = MENU
+    , game = Nothing
     , count = 0
-    , words = []
-    , stagedWords = []
-    , answers = []
     , showingCollections = False
     , collections = []
+    , gameModel = Nothing
+    , words = []
     }
 
-resetGame : Model -> Model
-resetGame model =
-    { model
-    | status = MENU
-    , stagedWords = []
-    , answers = []
-    }
+resetGame : Model g -> Model g
+resetGame model = model
 
-type alias Model =
+
+type Game
+    = GameGenderRace
+    | GameHangMan
+
+
+type alias Model g =
     { screensize: ( Float, Float )
-    , status : GameStatus
+    , game : Maybe Game
     , count : Int
     , words : List Word
-    , stagedWords : List Word
-    , answers : List Answer
     , showingCollections : Bool
     , collections : List Collection
+    , gameModel : Maybe g
     }
 
 type Gender
@@ -78,7 +72,6 @@ type alias Word =
     , position : ( Int, Int )
     , expired : Bool
     }
-
 
 type GameStatus
     = MENU
@@ -144,3 +137,6 @@ genderToString gender =
         MAS -> "MAS"
         FEM -> "FEM"
         NEU -> "NEU"
+
+empty : Html msg
+empty = text ""

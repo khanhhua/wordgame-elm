@@ -4,19 +4,29 @@ import Browser exposing (Document)
 import Browser.Dom
 import Browser.Navigation as Navigation
 
-import Html exposing (Html, button, div, text)
+import GenderRace as GR exposing (GRMsg(..))
+import Hangman as HM exposing (HMMsg(..))
+
+import Html exposing (Html, a, button, div, li, text, ul)
 import Html.Attributes exposing (class, style)
-import Random
+import Html.Events exposing (onClick)
 import Task
-import Time
 import Url
 
 import Common exposing (..)
 import Data exposing (..)
-import Elements exposing (action, collectionListElement, gameoverElement, navBar, reportElement, stage, stageSize)
+import Elements exposing (Action(..), action, collectionListElement, navBar, stageSize)
 
+type GameMsg
+    = GR GRMsg
+    | HM HMMsg
+type alias AppMsg = Msg GameMsg
 
-main : Program () Model Msg
+type GameModel
+    = GameModelGR GR.GRModel
+    | GameModelHM HM.HMModel
+
+main : Program () (Model GameModel) AppMsg
 main =
   Browser.application
     { init = init
@@ -28,7 +38,7 @@ main =
     }
 
 
-init : () -> Url.Url -> Navigation.Key -> ( Model, Cmd Msg )
+init : () -> Url.Url -> Navigation.Key -> ( Model GameModel, Cmd AppMsg )
 init () url key =
     ( initModel
     , Cmd.batch
@@ -38,7 +48,7 @@ init () url key =
     )
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : AppMsg -> Model GameModel -> ( Model GameModel, Cmd AppMsg )
 update msg model =
     case msg of
         SetScreenSize screen ->
@@ -62,162 +72,134 @@ update msg model =
             ( { model
                 | count = words |> List.length
                 , words = words
-                }, Cmd.none
-            )
-        ApplyRandomness words ->
-            ( { model
-                | words = words
-                }
-            , Cmd.none
-            )
-        StartGame ->
-            let
-                count = List.length model.words
-
-                randomizer = Random.map ( \orderings ->
-                    ( List.map2 (\ordering word  -> { ordering = ordering, position = ( 0, 0 ), word = word })
-                        orderings
-                        words
+                }, model.game
+                    |> Maybe.map (\game_ ->
+                        Task.perform (\words_ ->
+                                case game_ of
+                                    GameHangMan -> GameMsg (HM (HM.LoadWords words_))
+                                    GameGenderRace -> GameMsg (GR (GR.LoadWords words_))
+                        ) (Task.succeed words)
                     )
-                    |> List.sortBy (\item -> item.ordering)
-                    |> List.map (\item ->
-                        let
-                            word = item.word
-                        in
-                            { word | position = item.position }
+                    |> Maybe.withDefault Cmd.none
+
+            )
+        SelectGame gameId ->
+            case gameId of
+                1 ->
+                    ( { model
+                        | game = Just GameGenderRace
+                        , gameModel = GameModelGR GR.initModel |> Just }, Cmd.none )
+                2 ->
+                    ( { model
+                        | game = Just GameHangMan
+                        , gameModel = GameModelHM HM.initModel |> Just }, Cmd.none )
+                _ -> ( { model | game = Nothing }, Cmd.none )
+        GameMsg (GR msg_) ->
+            let
+                ( updatedModel, cmd ) = model.gameModel
+                    |> Maybe.map (\gm ->
+                        case gm of
+                            GameModelGR gameModel ->
+                                let
+                                    ( gameModel_, grCmd ) = GR.update msg_ gameModel
+                                in
+                                ( { model | gameModel = GameModelGR gameModel_  |> Just }
+                                , Cmd.map (GR >> GameMsg) grCmd
+                                )
+                            _ -> ( model, Cmd.none )
+
                         )
-                    )
-                    ( Random.list count ( Random.float 0 1 ) )
-
-                stagedWords = []
-                words = if 0 == ( model.words |> List.length )
-                    then model.stagedWords |> List.map ( \item -> { item | expired = False })
-                    else model.words
-            in
-            ( { model
-                | words = words
-                , stagedWords = stagedWords
-                , status = IN_GAME
-                , answers = []
-                }, Random.generate ApplyRandomness randomizer )
-        PauseGame ->
-            ( { model | status = PAUSED }, Cmd.none )
-        ResumeGame ->
-            ( { model | status = IN_GAME }, Cmd.none )
-        WordAnimationComplete key ->
+                    |> Maybe.withDefault ( model, Cmd.none )
+            in ( updatedModel,  cmd )
+        GameMsg (HM msg_) ->
             let
-                count = model.count - 1
-                status = if 0 == count then GAMEOVER else model.status
-                stagedWords = model.stagedWords
-                    |> List.map (\word ->
-                        if word == key then
-                            { word | expired = True }
-                        else
-                            word
-                    )
-                    |> updatePositions
-            in
-            ( { model
-                | count = count
-                , stagedWords = stagedWords
-                , status = status
-                } , Cmd.none)
-        SelectAnswer word answerText ->
-            let
-                answers =
-                    if ( word.gender == MAS && answerText == "DER" )
-                        || ( word.gender == FEM && answerText == "DIE" )
-                        || ( word.gender == NEU && answerText == "DAS" )
-                    then
-                         ( Answer word.text word.gender True ) :: model.answers
-                    else
-                         ( Answer word.text word.gender False ) :: model.answers
-                stagedWords = model.stagedWords
-                    |> List.map (\word_ ->
-                        if word_ == word then
-                            { word_ | expired = True }
-                        else
-                            word_
-                    )
-                    |> updatePositions
-                status = if
-                        0 == ( stagedWords |> List.filter ( .expired >> not ) |> List.length )
-                        && 0 == ( model.words |> List.length )
-                    then GAMEOVER
-                    else model.status
-            in
-            ( { model
-                | answers = answers
-                , stagedWords = stagedWords
-                , status = status
-                }, Cmd.none )
-        Tick _ ->
-            let
-                next = model.words |> List.head
-                stagedWords = case next of
-                    Nothing -> model.stagedWords
-                    Just word_ ->
-                        [word_]
-                        |> List.append model.stagedWords
-                        |> updatePositions
-                overflow = overflow_limit < ( stagedWords |> List.filter ( .expired >> not ) |> List.length )
-
-                words = model.words |> List.tail |> Maybe.withDefault []
-                status = if 0 == ( words |> List.length )
-                    then ENDING
-                    else model.status
-            in
-            ({ model
-                | words = words
-                , stagedWords = stagedWords
-                , status = if overflow then GAMEOVER else status
-                } , Cmd.none )
+                ( updatedModel, cmd ) = model.gameModel
+                    |> Maybe.map (\gm ->
+                        case gm of
+                            GameModelHM gameModel ->
+                                let
+                                    ( gameModel_, hmCmd ) = HM.update msg_ gameModel
+                                in
+                                ( { model | gameModel = GameModelHM gameModel_ |> Just }
+                                , Cmd.map (HM >> GameMsg) hmCmd
+                                )
+                            _ -> ( model, Cmd.none )
+                        )
+                    |> Maybe.withDefault ( model, Cmd.none )
+            in ( updatedModel,  cmd )
         _ -> ( model, Cmd.none )
 
 
-subscriptions : Model -> Sub Msg
+subscriptions : Model GameModel -> Sub AppMsg
 subscriptions model =
-    if model.status == IN_GAME then
-        Sub.batch [ Time.every (1/release_frequency * 1000) Tick ]
-    else
-        Sub.none
+    model.gameModel
+    |> Maybe.map (\gameModel ->
+        case gameModel of
+            GameModelGR gameModel_ -> Sub.map (GR >> GameMsg) (GR.subscriptions gameModel_)
+            GameModelHM gameModel_ -> Sub.map (HM >> GameMsg) (HM.subscriptions gameModel_)
+        )
+    |> Maybe.withDefault Sub.none
 
 
-view : Model -> Document Msg
+
+chooseGameType : ( Int -> Msg a ) -> Html ( Msg a )
+chooseGameType onSelectGame =
+    div [ class "row" ]
+        [ div [ class "col-4 mx-auto mt-3" ]
+            [ div [ class "choose-game" ]
+                  [ div [ class "list-group" ]
+                      [ a [ class "list-group-item list-group-item-action"
+                          , onClick ( onSelectGame 1 )
+                          ] [ text "Gender Race" ]
+                      , a [ class "list-group-item list-group-item-action"
+                          , onClick ( onSelectGame 2 )
+                          ] [ text "Hangman" ]
+                      ]
+                  ]
+            ]
+        ]
+
+
+view : Model GameModel -> Document AppMsg
 view model =
     let
-        stageSize_ = stageSize model.screensize
-        ( colW, _ ) = stageSize_
+        appMenuActions =
+            let
+                actions = model.gameModel
+                    |> Maybe.map (\game_ ->
+                        case game_ of
+                            GameModelGR model_ ->
+                                model_
+                                |> GR.appMenu >> List.map (\(Action label msg) -> Action label ((GameMsg << GR) msg))
+                            GameModelHM model_ ->
+                                model_
+                                |> HM.appMenu >> List.map (\(Action label msg) -> Action label ((GameMsg << HM) msg))
+                        )
+                    |> Maybe.withDefault []
+            in
+            [ action "Collections" ( ShowCollection True ) ] ++ actions
+
+        renderStage =
+            model.gameModel
+            |> Maybe.map (\gameModel ->
+                case gameModel of
+                    GameModelGR model_ ->
+                        model_ |> GR.gameStage model.screensize >> Html.map (GameMsg << GR)
+                    GameModelHM model_ ->
+                        model_ |> HM.gameStage >> Html.map (GameMsg << HM)
+                )
+            |> Maybe.withDefault empty
     in
     { title = "WordGame - ELM 2021"
     , body =
-        [ model |> navBar
-            ( [ action "Collections" ( ShowCollection True ) ] ++
-                ( if 0 == ( model.words |> List.length ) then []
-                    else
-                        ( case model.status of
-                            IN_GAME -> [ action "Pause" PauseGame ]
-                            PAUSED -> [ action "Resume" ResumeGame ]
-                            MENU -> [ action "Start" StartGame ]
-                            _ -> []
-                        )
-                )
-            )
-        , collectionListElement SelectFile ( ShowCollection False ) model.showingCollections model.collections
-        , div [ class "container" ]
-            [ div [ class "row" ]
-                ( if model.status == GAMEOVER
-                then [ gameoverElement StartGame
-                    , reportElement model.answers
-                    ]
-                else
-                    [ model |> stage
-                        WordAnimationComplete
-                        SelectAnswer
-                        stageSize_
-                    ]
-                )
+        if model.game == Nothing
+        then
+            [ navBar [] Nothing
+            , chooseGameType SelectGame
             ]
-        ]
+        else
+            [ navBar appMenuActions (Just ( SelectGame 0 ))
+            , collectionListElement SelectFile ( ShowCollection False ) model.showingCollections model.collections
+            , renderStage
+            ]
     }
-
