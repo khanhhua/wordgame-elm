@@ -214,6 +214,7 @@ update msg model =
             ( { model
                 | stagedWords = stagedWords
                 , words = tail |> Maybe.withDefault []
+                , showingResult = False
                 , hiddenWord = head
                     |> Maybe.map (\word ->
                         { text = word.text |> String.toLower
@@ -272,7 +273,7 @@ gameStage model =
         showingResult = model.showingResult
         keydownDecoder = (Json.string |> Json.andThen (String.toLower >> Json.succeed))
     in
-    div [ class "container"
+    div [ class "container container-md-fluid"
         , tabindex 1
         , on "keydown" (Json.map (\maybeEnteredKey ->
             maybeEnteredKey
@@ -309,23 +310,26 @@ gameStage model =
                 , div [ class "col-4" ]
                     [ gallowElement model.gallowStatus
                     ]
-                , if showingResult
-                    then ( div [ class "col-8 text-center"]
-                        [ button
-                            [ class "btn btn-lg btn-primary"
-                            , onClick NextWord
-                            ] [ text "Next"]
-                        ]
-                    )
-                    else empty
                 ]
             )
-        , currentWord
-            |> Maybe.map (\word ->
-                div [ class "row" ]
-                    [ keyboardElement word.text ]
-                )
-            |> Maybe.withDefault empty
+        , if not showingResult
+            then
+                currentWord
+                |> Maybe.map (\word ->
+                    div [ class "row" ]
+                        [ keyboardElement word.text ]
+                    )
+                |> Maybe.withDefault empty
+            else empty
+        , if showingResult
+            then ( div [ class "col-8 text-center"]
+                [ button
+                    [ class "btn btn-lg btn-primary"
+                    , onClick NextWord
+                    ] [ text "Next"]
+                ]
+            )
+            else empty
         ]
 
 hiddenBoxes : HiddenWord -> Html HMMsg
@@ -348,14 +352,14 @@ hiddenBoxes hiddenWord =
                     |> Maybe.map String.fromChar
             )
     in
-    div [ class "hidden-boxes" ]
+    div [ class "hidden-boxes mt-5" ]
         [ div [ class "input-group hangman-hidden-word mx-auto" ]
             ( hiddenWord.displayedIndices
             |> List.indexedMap (\index displayed ->
                 span
                     [ disabled (fnDisabled index |> Maybe.withDefault True)
                     , maxlength 1
-                    , class "form-control form-control-lg"
+                    , class "form-control form-control-lg me-1"
                     ] [ text ( fnVisibleChatAt index |> Maybe.withDefault "_" ) ]
                 )
             )

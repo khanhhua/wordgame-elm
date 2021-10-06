@@ -178,7 +178,7 @@ appMenu model =
 
 gameStage : (Float, Float) -> GRModel -> Html GRMsg
 gameStage stageSize model =
-    div [ class "container" ]
+    div [ class "container container-md-fluid" ]
         [ div [ class "row" ]
             ( if model.status == GAMEOVER
             then [ gameoverElement StartGame

@@ -10,6 +10,12 @@
   }
 }
 
+@media (min-width: 768px) {
+  .container-md-fluid {
+    max-width: 100%;
+  }
+}
+
 .animation-tetrix {
   animation: tetrix 8s ease-in running forwards;
 }
@@ -76,7 +82,7 @@ $color-neutrum: #0f9c8c;
 }
 
 .hidden-boxes {
-  margin-top: 12%;
+
 }
 
 .input-group.hangman-hidden-word {
