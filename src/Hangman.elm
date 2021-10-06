@@ -320,6 +320,12 @@ gameStage model =
                     else empty
                 ]
             )
+        , currentWord
+            |> Maybe.map (\word ->
+                div [ class "row" ]
+                    [ keyboardElement word.text ]
+                )
+            |> Maybe.withDefault empty
         ]
 
 hiddenBoxes : HiddenWord -> Html HMMsg
@@ -377,3 +383,28 @@ gallowElement stati =
             in (d :: acc)
             ) []
         )
+
+keyboardElement : String -> Html HMMsg
+keyboardElement wordText =
+    let
+        onKey key =
+            if String.contains key wordText
+                then PickCharacter key
+                else PickWrong
+        row1Keys = String.split "" "qwertzuiopü"
+        row2Keys = String.split "" "asdfghjklöä"
+        row3Keys = String.split "" "yxcvbnma"
+
+        btn key = button [ class "btn btn-sm btn-outline-secondary mx-1 my-1", onClick (onKey key) ] [ text key ]
+    in
+    div [ class "col-8 keyboard" ]
+        [ div [ class "key-row d-flex justify-content-center" ]
+            ( row1Keys |> List.map btn
+            )
+        , div [ class "key-row d-flex justify-content-center" ]
+            ( row2Keys |> List.map btn
+            )
+        , div [ class "key-row d-flex justify-content-center" ]
+            ( row3Keys |> List.map btn
+            )
+        ]
