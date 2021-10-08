@@ -15,37 +15,29 @@ type Msg a
     | GotWordList ( List Word )
     | ShowCollection Bool
     | SelectGame Int
+    | StartGame
+    | PauseGame
+    | ResumeGame
     | GameMsg a
 
-
-initModel : Model g
-initModel =
-    { screensize = dimension 0 0
-    , game = Nothing
-    , count = 0
-    , showingCollections = False
-    , collections = []
-    , gameModel = Nothing
-    , words = []
-    }
 
 resetGame : Model g -> Model g
 resetGame model = model
 
-
-type Game
-    = GameGenderRace
-    | GameHangMan
+--
+--type Game
+--    = GameGenderRace
+--    | GameHangMan
 
 
 type alias Model g =
     { screensize: ( Float, Float )
-    , game : Maybe Game
+    , status : GameStatus
+    , gameModel : g
     , count : Int
     , words : List Word
     , showingCollections : Bool
     , collections : List Collection
-    , gameModel : Maybe g
     }
 
 type Gender
@@ -86,6 +78,36 @@ type alias Answer =
     , gender : Gender
     , correct : Bool
     }
+
+
+initModel : g -> Model g
+initModel gameModel =
+    { screensize = dimension 0 0
+    , status = MENU
+    , gameModel = gameModel
+    , count = 0
+    , showingCollections = False
+    , collections = []
+    , words = []
+    }
+
+modelMap : (g -> Maybe a) -> Model g -> Model (Maybe a)
+modelMap f m =
+    let
+        default = { screensize = m.screensize
+            , status = m.status
+            , gameModel = Nothing
+            , count = m.count
+            , showingCollections = m.showingCollections
+            , collections = m.collections
+            , words = m.words
+            }
+    in
+    case m.status of
+        MENU -> default
+        _ -> { default
+             | gameModel = (f m.gameModel)
+             }
 
 
 dimension : Float -> Float -> ( Float, Float )

@@ -7,14 +7,11 @@ import Random
 import Time
 
 import Common exposing (..)
-import Elements exposing (Action, action, gameoverElement, onAnimationEnd, px, reportElement, stageSize)
+import Elements exposing (Action, action, gameoverElement, navBar, onAnimationEnd, px, pxI, reportElement, stageSize)
 
 type GRMsg
     = ApplyRandomness (List Word)
     | LoadWords ( List Word )
-    | StartGame
-    | PauseGame
-    | ResumeGame
     | WordAnimationComplete Word
     | SelectAnswer Word String
     | Tick Time.Posix
@@ -22,8 +19,7 @@ type GRMsg
 
 
 type alias GRModel =
-    { status : GameStatus
-    , count : Int
+    { count : Int
     , words : List Word
     , stagedWords : List Word
     , answers : List Answer
@@ -32,20 +28,19 @@ type alias GRModel =
 
 initModel : GRModel
 initModel =
-    { status = MENU
-    , count = 0
+    { count = 0
     , words = []
     , stagedWords = []
     , answers = []
     }
 
 
-update : GRMsg -> GRModel -> ( GRModel, Cmd GRMsg)
+update : Msg GRMsg -> GRModel -> ( GRModel, Cmd (Msg GRMsg))
 update msg model =
     case msg of
-        LoadWords words ->
+        GameMsg (LoadWords words) ->
             ( { model | words = words }, Cmd.none )
-        ApplyRandomness words ->
+        GameMsg (ApplyRandomness words) ->
             ( { model
                 | words = words
                 }
@@ -78,17 +73,16 @@ update msg model =
             ( { model
                 | words = words
                 , stagedWords = stagedWords
-                , status = IN_GAME
                 , answers = []
-                }, Random.generate ApplyRandomness randomizer )
-        PauseGame ->
-            ( { model | status = PAUSED }, Cmd.none )
-        ResumeGame ->
-            ( { model | status = IN_GAME }, Cmd.none )
-        WordAnimationComplete key ->
+                }, Random.generate (GameMsg << ApplyRandomness) randomizer )
+        --PauseGame ->
+        --    ( { model | status = PAUSED }, Cmd.none )
+        --ResumeGame ->
+        --    ( { model | status = IN_GAME }, Cmd.none )
+        GameMsg (WordAnimationComplete key) ->
             let
                 count = model.count - 1
-                status = if 0 == count then GAMEOVER else model.status
+                --status = if 0 == count then GAMEOVER else model.status
                 stagedWords = model.stagedWords
                     |> List.map (\word ->
                         if word == key then
@@ -101,9 +95,9 @@ update msg model =
             ( { model
                 | count = count
                 , stagedWords = stagedWords
-                , status = status
+                --, status = status
                 } , Cmd.none)
-        SelectAnswer word answerText ->
+        GameMsg (SelectAnswer word answerText) ->
             let
                 answers =
                     if ( word.gender == MAS && answerText == "DER" )
@@ -121,18 +115,18 @@ update msg model =
                             word_
                     )
                     |> updatePositions
-                status = if
-                        0 == ( stagedWords |> List.filter ( .expired >> not ) |> List.length )
-                        && 0 == ( model.words |> List.length )
-                    then GAMEOVER
-                    else model.status
+                --status = if
+                --        0 == ( stagedWords |> List.filter ( .expired >> not ) |> List.length )
+                --        && 0 == ( model.words |> List.length )
+                --    then GAMEOVER
+                --    else model.status
             in
             ( { model
                 | answers = answers
                 , stagedWords = stagedWords
-                , status = status
+                --, status = status
                 }, Cmd.none )
-        Tick _ ->
+        GameMsg (Tick _) ->
             let
                 next = model.words |> List.head
                 stagedWords = case next of
@@ -144,19 +138,19 @@ update msg model =
                 overflow = overflow_limit < ( stagedWords |> List.filter ( .expired >> not ) |> List.length )
 
                 words = model.words |> List.tail |> Maybe.withDefault []
-                status = if 0 == ( words |> List.length )
-                    then ENDING
-                    else model.status
+                --status = if 0 == ( words |> List.length )
+                --    then ENDING
+                --    else model.status
             in
             ({ model
                 | words = words
                 , stagedWords = stagedWords
-                , status = if overflow then GAMEOVER else status
+                --, status = if overflow then GAMEOVER else status
                 } , Cmd.none )
         _ -> ( model, Cmd.none )
 
 
-subscriptions : GRModel -> Sub GRMsg
+subscriptions : Model GRModel -> Sub GRMsg
 subscriptions model =
     if model.status == IN_GAME then
         Sub.batch [ Time.every (1/release_frequency * 1000) Tick ]
@@ -164,9 +158,28 @@ subscriptions model =
         Sub.none
 
 
-appMenu : GRModel -> List (Action GRMsg)
+view : Model (Maybe GRModel) -> List (Html (Msg GRMsg))
+view m =
+    let
+        model = { screensize = m.screensize
+                , status = m.status
+                , count = m.count
+                , showingCollections = m.showingCollections
+                , collections = m.collections
+                , words = m.words
+                , gameModel = case m.gameModel of
+                    Nothing -> initModel
+                    Just gameModel -> gameModel
+                }
+    in
+    [ navBar (appMenu model) [action "Back" (SelectGame 0)]
+    , gameStage (stageSize model.screensize) model
+    ]
+
+appMenu : Model GRModel -> List (Action (Msg GRMsg))
 appMenu model =
-    if 0 == ( model.words |> List.length ) then []
+    if 0 == ( model.words |> List.length )
+    then [ action "Collections" ( ShowCollection True ) ]
     else
         ( case model.status of
             IN_GAME -> [ action "Pause" PauseGame ]
@@ -176,30 +189,30 @@ appMenu model =
         )
 
 
-gameStage : (Float, Float) -> GRModel -> Html GRMsg
+gameStage : (Int, Int) -> Model GRModel -> Html (Msg GRMsg)
 gameStage stageSize model =
     div [ class "container container-md-fluid" ]
         [ div [ class "row" ]
             ( if model.status == GAMEOVER
             then [ gameoverElement StartGame
-                , reportElement model.answers
+                , reportElement model.gameModel.answers
                 ]
             else
-                [ model |> stage
-                    WordAnimationComplete
-                    SelectAnswer
+                [ model.gameModel |> stage
+                    (WordAnimationComplete >> GameMsg)
+                    (\a b -> (SelectAnswer a b) |> GameMsg)
                     stageSize
                 ]
             )
         ]
 
 
-stage : (Word -> msg) -> (Word -> String -> msg) -> ( Float, Float ) -> GRModel -> Html msg
+stage : (Word -> msg) -> (Word -> String -> msg) -> ( Int, Int ) -> GRModel -> Html msg
 stage onAnimationComplete onAnswer ( width, height ) model =
     div
         [ class "stage"
-        , style "width" ( px width )
-        , style "height" ( px height )
+        , style "width" ( pxI width )
+        , style "height" ( pxI height )
         , class "position-relative mt-1 mx-auto"
         ]
         ( model.stagedWords

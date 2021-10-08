@@ -10,19 +10,42 @@ import Html.Events exposing (on, onClick)
 type Action a = Action String a
 
 
+chooseGameTypePage : ( Int -> msg ) -> List ( Html msg )
+chooseGameTypePage onSelectGame =
+    [ navBar [] []
+    , div [ class "row" ]
+        [ div [ class "col-6 display-6 mt-3 mx-auto" ]
+            [ div [ class "choose-game" ]
+                  [ div [ class "list-group" ]
+                      [ a [ class "list-group-item list-group-item-action"
+                          , onClick ( onSelectGame 1 )
+                          ] [ text "Gender Race" ]
+                      , a [ class "list-group-item list-group-item-action"
+                          , onClick ( onSelectGame 2 )
+                          ] [ text "Hangman" ]
+                      ]
+                  ]
+            ]
+        ]
+    ]
+
+
 px : Float -> String
 px l = ( String.fromFloat l ) ++ "px"
+
+pxI : Int -> String
+pxI l = ( String.fromInt l ) ++ "px"
 
 action : String -> msg -> Action msg
 action label msg =
     Action label msg
 
-navBar : List ( Action msg ) -> Maybe msg -> Html msg
-navBar actions onSelectGame =
+navBar : List ( Action msg ) -> List ( Action msg ) -> Html msg
+navBar leftActions rightActions =
     nav [ class "navbar navbar-expand navbar-light bg-light sticky-top" ]
         [ div [ class "container-fluid" ]
             [ ul [ class "col navbar-nav me-auto" ]
-                ( actions
+                ( leftActions
                     |> List.map ( \item ->
                         let
                             ( label, msg ) = case item of
@@ -38,11 +61,14 @@ navBar actions onSelectGame =
                 )
             , a [class "col navbar-brand mx-auto fs-2 text-center"] [ text "WordGame" ]
             , div [ class "col navbar-nav mr-0 flex-row-reverse" ]
-                ( onSelectGame
-                    |> Maybe.map (\onSelectGame_ ->
-                        [ button [ class "btn btn-outline-dark", onClick onSelectGame_ ] [ text "Back" ] ]
-                        )
-                    |> Maybe.withDefault []
+                ( rightActions
+                    |> List.map (\item ->
+                        let
+                            ( label, msg ) = case item of
+                                Action label_ msg_ -> ( label_, msg_ )
+                        in
+                        button [ class "btn btn-outline-dark", onClick msg ] [ text label ]
+                    )
                 )
             ]
         ]

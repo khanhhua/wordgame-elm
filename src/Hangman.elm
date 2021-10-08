@@ -2,22 +2,17 @@ module Hangman exposing (..)
 
 import Array
 import Common exposing (Answer, GameStatus(..), Model, Msg(..), Word, empty)
-import Elements exposing (Action, action, gameoverElement, reportElement, stageSize)
+import Elements exposing (Action, action, gameoverElement, navBar, reportElement, stageSize)
 import Html exposing (Html, button, div, input, p, span, text)
 import Html.Attributes exposing (class, disabled, maxlength, tabindex, value)
 import Json.Decode as Json
 import Random
-import Set exposing (Set)
 import Time
 import Html.Events exposing (on, onClick)
 
 type HMMsg
-    = HMNoOp
-    | ApplyRandomness ( List Word )
+    = ApplyRandomness ( List Word )
     | LoadWords ( List Word )
-    | StartGame
-    | PauseGame
-    | ResumeGame
     | PickCharacter String
     | PickWrong
     | NextWord
@@ -34,7 +29,6 @@ type alias HMModel =
     , hiddenWord : Maybe HiddenWord
     , words : List Word
     , stagedWords : List Word -- Used words
-    , status : GameStatus
     , answers : List Answer
     , gallowStatus : List GallowStatus
     }
@@ -60,18 +54,17 @@ initModel =
     , hiddenWord = Nothing
     , words = []
     , stagedWords = []
-    , status = MENU
     , answers = []
     , gallowStatus = []
     }
 
 
-update : HMMsg -> HMModel -> ( HMModel, Cmd HMMsg )
+update : Msg HMMsg -> HMModel -> ( HMModel, Cmd (Msg HMMsg) )
 update msg model =
     case msg of
-        LoadWords words ->
+        GameMsg (LoadWords words) ->
             ( { model | words = words }, Cmd.none )
-        ApplyRandomness words ->
+        GameMsg (ApplyRandomness words) ->
             let
                   head = words |> List.head
                   tail = words |> List.tail
@@ -115,14 +108,9 @@ update msg model =
             ( { initModel
                 | words = words
                 , stagedWords = stagedWords
-                , status = IN_GAME
                 , answers = []
-                }, Random.generate ApplyRandomness randomizer )
-        PauseGame ->
-            ( { model | status = PAUSED }, Cmd.none )
-        ResumeGame ->
-            ( { model | status = IN_GAME }, Cmd.none )
-        PickCharacter char ->
+                }, Random.generate (GameMsg << ApplyRandomness) randomizer )
+        GameMsg (PickCharacter char) ->
             let
                 updateDisplayIndices : HiddenWord -> List Bool
                 updateDisplayIndices word =
@@ -165,18 +153,18 @@ update msg model =
                         |> Maybe.withDefault model.answers
                     else model.answers
 
-                status = if isCorrect && (List.length model.words == 0)
-                    then GAMEOVER
-                    else model.status
+                --status = if isCorrect && (List.length model.words == 0)
+                --    then GAMEOVER
+                --    else model.status
             in
             ( { model
                 | hiddenWord = hiddenWord
                 , showingResult = isCorrect
-                , status = status
+                --, status = status
                 , answers = answers
             }
             , Cmd.none )
-        PickWrong ->
+        GameMsg PickWrong ->
             let
                 nextStatus = executionSequence
                     |> Array.get (List.length model.gallowStatus)
@@ -194,18 +182,18 @@ update msg model =
                            )
                        |> Maybe.withDefault model.answers
                    else model.answers
-                status_ = if isLost && (List.length model.words == 0)
-                    then GAMEOVER
-                    else model.status
+                --status_ = if isLost && (List.length model.words == 0)
+                --    then GAMEOVER
+                --    else model.status
             in
             ( { model
                 | gallowStatus = gallowStatus
                 , showingResult = isLost
-                , status = status_
+                --, status = status_
                 , answers = answers
             }
             , Cmd.none )
-        NextWord ->
+        GameMsg NextWord ->
             let
                 head = model.words |> List.head
                 tail = model.words |> List.tail
@@ -255,9 +243,29 @@ subscriptions model =
         Sub.none
 
 
-appMenu : HMModel -> List (Action HMMsg)
+view : Model (Maybe HMModel) -> List (Html (Msg HMMsg))
+view m =
+    let
+        model = { screensize = m.screensize
+                , status = m.status
+                , count = m.count
+                , showingCollections = m.showingCollections
+                , collections = m.collections
+                , words = m.words
+                , gameModel = case m.gameModel of
+                    Nothing -> initModel
+                    Just gameModel -> gameModel
+                }
+    in
+    [ navBar (appMenu model) [action "Back" (SelectGame 0)]
+    , gameStage model
+    ]
+
+
+appMenu : Model HMModel -> List (Action (Msg HMMsg))
 appMenu model =
-    if 0 == ( model.words |> List.length ) then []
+    if 0 == ( model.words |> List.length )
+    then [ action "Collections" ( ShowCollection True ) ]
     else
         ( case model.status of
             IN_GAME -> [ action "Pause" PauseGame ]
@@ -266,11 +274,12 @@ appMenu model =
             _ -> []
         )
 
-gameStage : HMModel -> Html HMMsg
+gameStage : Model HMModel -> Html (Msg HMMsg)
 gameStage model =
     let
-        currentWord = model.hiddenWord
-        showingResult = model.showingResult
+        gameModel = model.gameModel
+        currentWord = model.gameModel.hiddenWord
+        showingResult = model.gameModel.showingResult
         keydownDecoder = (Json.string |> Json.andThen (String.toLower >> Json.succeed))
     in
     div [ class "container container-md-fluid"
@@ -281,11 +290,11 @@ gameStage model =
                 currentWord
                 |> Maybe.map (\word ->
                     if (String.contains enteredKey word.text)
-                        then PickCharacter enteredKey
-                        else PickWrong
+                        then (GameMsg << PickCharacter) enteredKey
+                        else (GameMsg PickWrong)
                     )
                 )
-            |> Maybe.withDefault HMNoOp
+            |> Maybe.withDefault NoOp
             ) (Json.map2
                 (\filteringKey key -> if String.length filteringKey > 1 then Nothing else Just key)
                 (Json.field "key" Json.string)
@@ -294,23 +303,23 @@ gameStage model =
         ]
         [ div [ class "row" ]
             ( if model.status == GAMEOVER
-            then [ gameoverElement StartGame
-                , reportElement model.answers
-                ]
-            else [ currentWord
-                    |> Maybe.map (\word ->
-                        div [ class "col-8" ]
-                            [ hiddenBoxes word
-                            , div []
-                                [ p [ class "text-center display-2" ] [ text word.hint ]
-                                ]
-                            ]
-                        )
-                    |> Maybe.withDefault empty
-                , div [ class "col-4" ]
-                    [ gallowElement model.gallowStatus
+                then [ gameoverElement StartGame
+                    , reportElement gameModel.answers
                     ]
-                ]
+                else [ currentWord
+                    |> Maybe.map (\word ->
+                              div [ class "col-8" ]
+                                  [ hiddenBoxes word
+                                  , div []
+                                      [ p [ class "text-center display-2" ] [ text word.hint ]
+                                      ]
+                                  ]
+                              )
+                          |> Maybe.withDefault empty
+                    , div [ class "col-4" ]
+                        [ gallowElement gameModel.gallowStatus
+                        ]
+                    ]
             )
         , if not showingResult
             then
@@ -325,14 +334,14 @@ gameStage model =
             then ( div [ class "col-8 text-center"]
                 [ button
                     [ class "btn btn-lg btn-primary"
-                    , onClick NextWord
+                    , onClick (GameMsg NextWord)
                     ] [ text "Next"]
                 ]
             )
             else empty
         ]
 
-hiddenBoxes : HiddenWord -> Html HMMsg
+hiddenBoxes : HiddenWord -> Html (Msg HMMsg)
 hiddenBoxes hiddenWord =
     let
         fnDisabled i =
@@ -388,13 +397,13 @@ gallowElement stati =
             ) []
         )
 
-keyboardElement : String -> Html HMMsg
+keyboardElement : String -> Html (Msg HMMsg)
 keyboardElement wordText =
     let
         onKey key =
             if String.contains key wordText
-                then PickCharacter key
-                else PickWrong
+                then (GameMsg << PickCharacter) key
+                else GameMsg PickWrong
         row1Keys = String.split "" "qwertzuiopü"
         row2Keys = String.split "" "asdfghjklöä"
         row3Keys = String.split "" "yxcvbnma"
