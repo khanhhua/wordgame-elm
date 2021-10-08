@@ -172,7 +172,7 @@ view m =
                     Just gameModel -> gameModel
                 }
     in
-    [ navBar (appMenu model) [action "Back" (SelectGame 0)]
+    [ navBar (Just "Gender Race") (appMenu model) [action "Back" (SelectGame 0)]
     , gameStage (stageSize model.screensize) model
     ]
 
@@ -181,10 +181,11 @@ appMenu model =
     if 0 == ( model.words |> List.length )
     then [ action "Collections" ( ShowCollection True ) ]
     else
+        [ action "Collections" ( ShowCollection True ) ] ++
         ( case model.status of
             IN_GAME -> [ action "Pause" PauseGame ]
             PAUSED -> [ action "Resume" ResumeGame ]
-            MENU -> [ action "Start" StartGame ]
+            INIT -> [ action "Start" StartGame ]
             _ -> []
         )
 

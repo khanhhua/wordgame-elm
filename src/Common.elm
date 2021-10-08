@@ -67,6 +67,7 @@ type alias Word =
 
 type GameStatus
     = MENU
+    | INIT
     | IN_GAME
     | PAUSED
     | ENDING

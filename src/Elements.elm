@@ -12,7 +12,7 @@ type Action a = Action String a
 
 chooseGameTypePage : ( Int -> msg ) -> List ( Html msg )
 chooseGameTypePage onSelectGame =
-    [ navBar [] []
+    [ navBar Nothing [] []
     , div [ class "row" ]
         [ div [ class "col-6 display-6 mt-3 mx-auto" ]
             [ div [ class "choose-game" ]
@@ -40,8 +40,8 @@ action : String -> msg -> Action msg
 action label msg =
     Action label msg
 
-navBar : List ( Action msg ) -> List ( Action msg ) -> Html msg
-navBar leftActions rightActions =
+navBar : Maybe String -> List ( Action msg ) -> List ( Action msg ) -> Html msg
+navBar gameTitle leftActions rightActions =
     nav [ class "navbar navbar-expand navbar-light bg-light sticky-top" ]
         [ div [ class "container-fluid" ]
             [ ul [ class "col navbar-nav me-auto" ]
@@ -59,7 +59,11 @@ navBar leftActions rightActions =
                             ]
                     )
                 )
-            , a [class "col navbar-brand mx-auto fs-2 text-center"] [ text "WordGame" ]
+            , a [class "col navbar-brand mx-auto fs-2 text-center"]
+                [ text (gameTitle
+                    |> Maybe.map (\title -> "WordGame: " ++ title)
+                    |> Maybe.withDefault "WordGame")
+                ]
             , div [ class "col navbar-nav mr-0 flex-row-reverse" ]
                 ( rightActions
                     |> List.map (\item ->

@@ -63,7 +63,7 @@ update : Msg HMMsg -> HMModel -> ( HMModel, Cmd (Msg HMMsg) )
 update msg model =
     case msg of
         GameMsg (LoadWords words) ->
-            ( { model | words = words }, Cmd.none )
+            ( { initModel | words = words }, Cmd.none )
         GameMsg (ApplyRandomness words) ->
             let
                   head = words |> List.head
@@ -257,7 +257,7 @@ view m =
                     Just gameModel -> gameModel
                 }
     in
-    [ navBar (appMenu model) [action "Back" (SelectGame 0)]
+    [ navBar (Just "Hangman") (appMenu model) [action "Back" (SelectGame 0)]
     , gameStage model
     ]
 
@@ -267,10 +267,11 @@ appMenu model =
     if 0 == ( model.words |> List.length )
     then [ action "Collections" ( ShowCollection True ) ]
     else
+        [ action "Collections" ( ShowCollection True ) ] ++
         ( case model.status of
             IN_GAME -> [ action "Pause" PauseGame ]
             PAUSED -> [ action "Resume" ResumeGame ]
-            MENU -> [ action "Start" StartGame ]
+            INIT -> [ action "Start" StartGame ]
             _ -> []
         )
 

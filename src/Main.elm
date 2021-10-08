@@ -107,6 +107,7 @@ update msg model =
                 in
                 ( { updatedModel
                     | showingCollections = False
+                    , status = INIT
                     }
                 , loadFileByName GotWordList fileName )
             GotWordList words ->
@@ -129,11 +130,13 @@ update msg model =
                     1 ->
                         ( { model
                             | gameModel = GameModelGR GR.initModel
+                            , status = INIT
                             }
                         , Cmd.none )
                     2 ->
                         ( { model
                             | gameModel = GameModelHM HM.initModel
+                            , status = INIT
                             }
                         , Cmd.none )
                     _ -> ( { model
