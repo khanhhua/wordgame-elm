@@ -264,7 +264,7 @@ view m =
 
 appMenu : Model HMModel -> List (Action (Msg HMMsg))
 appMenu model =
-    if 0 == ( model.words |> List.length )
+    if 0 == ( model.gameModel.words |> List.length )
     then [ action "Collections" ( ShowCollection True ) ]
     else
         [ action "Collections" ( ShowCollection True ) ] ++

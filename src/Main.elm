@@ -128,14 +128,20 @@ update msg model =
             SelectGame gameId ->
                 case gameId of
                     1 ->
+                        let
+                            gm = GR.initModel
+                        in
                         ( { model
-                            | gameModel = GameModelGR GR.initModel
+                            | gameModel = GameModelGR { gm | words = model.words }
                             , status = INIT
                             }
                         , Cmd.none )
                     2 ->
+                        let
+                            gm = HM.initModel
+                        in
                         ( { model
-                            | gameModel = GameModelHM HM.initModel
+                            | gameModel = GameModelHM { gm | words = model.words }
                             , status = INIT
                             }
                         , Cmd.none )
