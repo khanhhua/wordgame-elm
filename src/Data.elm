@@ -1,6 +1,6 @@
 module Data exposing (..)
 
-import Common exposing (Collection, Gender(..), Msg(..), Package, Word)
+import Common exposing (Collection, Tag(..), Msg(..), Package, Word)
 import Http exposing (Error(..))
 import Json.Decode as D exposing (Decoder)
 
@@ -46,13 +46,18 @@ loadCollectionsMetadata toMsg =
                 }
         ) )
 
-deserializeGender : String -> Result Error Gender
-deserializeGender gender =
-    case gender of
-        "MAS" -> Ok MAS
-        "FEM" -> Ok FEM
-        "NEU" -> Ok NEU
-        _ -> Err ( BadBody gender )
+deserializeTags : String -> Result Error (List Tag)
+deserializeTags tags =
+    tags
+    |> String.split "|"
+    |> List.map tagFromString
+    |> List.foldl (\item acc ->
+        case acc of
+            Ok list -> case item of
+                Err innerErr -> Err ( BadBody innerErr )
+                Ok tag -> Ok (tag :: list)
+            err -> err
+        ) (Ok [])
 
 decodePackage : String -> Decoder Package
 decodePackage packageId =
@@ -76,10 +81,24 @@ toWordList content =
     |> String.split "\n"
     |> List.map ( \line ->
         case line |> String.split ";" of
-            [ text, meaning, gender ] ->
-                case deserializeGender gender of
-                    Ok gender_ -> Just ( Word text meaning gender_ (0, 0) False )
+            [ text, meaning, tags ] ->
+                case deserializeTags tags of
+                    Ok tags_ -> Just ( Word text meaning tags_ (0, 0) False )
                     _ -> Nothing
             _ -> Nothing
         )
     |> List.filterMap identity
+
+tagFromString : String -> Result String Tag
+tagFromString s =
+    case s of
+        "MAS" -> Ok MAS
+        "FEM" -> Ok FEM
+        "NEU" -> Ok NEU
+        "ADJ"  -> Ok ADJ
+        "ADV"  -> Ok ADV
+        "VER"  -> Ok VER
+        "PREP" -> Ok PREP
+        "KON"  -> Ok KON
+        "ART"  -> Ok ART
+        other -> Err ("ValueError: " ++ other)

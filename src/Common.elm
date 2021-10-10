@@ -40,10 +40,16 @@ type alias Model g =
     , collections : List Collection
     }
 
-type Gender
+type Tag
     = MAS
     | FEM
     | NEU
+    | ADJ
+    | ADV
+    | VER
+    | PREP
+    | KON
+    | ART
 
 
 type alias Package =
@@ -60,7 +66,7 @@ type alias Collection =
 type alias Word =
     { text : String
     , meaning : String
-    , gender : Gender
+    , tags : List Tag
     , position : ( Int, Int )
     , expired : Bool
     }
@@ -76,7 +82,7 @@ type GameStatus
 
 type alias Answer =
     { text : String
-    , gender : Gender
+    , tags : List Tag
     , correct : Bool
     }
 
@@ -154,12 +160,29 @@ updatePositions items =
     |> (\{ words } -> words |> List.reverse )
 
 
-genderToString : Gender -> String
-genderToString gender =
-    case gender of
-        MAS -> "MAS"
-        FEM -> "FEM"
-        NEU -> "NEU"
+tagsToString : List Tag -> String
+tagsToString tags =
+    let
+        serialize tag = case tag of
+            MAS -> "MAS"
+            FEM -> "FEM"
+            NEU -> "NEU"
+            ADJ -> "ADJ"
+            ADV -> "ADV"
+            VER -> "VER"
+            PREP -> "PREP"
+            KON -> "KON"
+            ART -> "ART"
+    in
+    tags |> List.map serialize |> String.join ", "
 
 empty : Html msg
 empty = text ""
+
+
+filterWords : List Tag -> List Word -> List Word
+filterWords tags =
+    List.filter (\word -> 0 < ( tags
+                                |> List.filter (\tag -> List.member tag word.tags)
+                                |> List.length
+                ))

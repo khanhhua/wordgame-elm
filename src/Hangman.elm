@@ -1,7 +1,7 @@
 module Hangman exposing (..)
 
 import Array
-import Common exposing (Answer, GameStatus(..), Model, Msg(..), Word, empty)
+import Common exposing (Answer, GameStatus(..), Model, Msg(..), Tag(..), Word, empty, filterWords)
 import Elements exposing (Action, action, gameoverElement, navBar, reportElement, stageSize)
 import Html exposing (Html, button, div, input, p, span, text)
 import Html.Attributes exposing (class, disabled, maxlength, tabindex, value)
@@ -63,7 +63,7 @@ update : Msg HMMsg -> HMModel -> ( HMModel, Cmd (Msg HMMsg) )
 update msg model =
     case msg of
         GameMsg (LoadWords words) ->
-            ( { initModel | words = words }, Cmd.none )
+            ( { initModel | words = words |> filterWords [MAS, FEM, NEU, VER, ADJ] }, Cmd.none )
         GameMsg (ApplyRandomness words) ->
             let
                   head = words |> List.head
@@ -146,7 +146,7 @@ update msg model =
                     then model.stagedWords
                         |> List.head
                         |> Maybe.map (\word -> { text = word.text
-                                               , gender = word.gender
+                                               , tags = word.tags
                                                , correct = True
                                                } :: model.answers
                            )
@@ -176,7 +176,7 @@ update msg model =
                     then model.stagedWords
                         |> List.head
                         |> Maybe.map (\word -> { text = word.text
-                                               , gender = word.gender
+                                               , tags = word.tags
                                                , correct = False
                                                } :: model.answers
                            )
@@ -407,7 +407,7 @@ keyboardElement wordText =
                 else GameMsg PickWrong
         row1Keys = String.split "" "qwertzuiopü"
         row2Keys = String.split "" "asdfghjklöä"
-        row3Keys = String.split "" "yxcvbnma"
+        row3Keys = String.split "" "yxcvbnm "
 
         btn key = button [ class "btn btn-sm btn-outline-secondary mx-1 my-1", onClick (onKey key) ] [ text key ]
     in
