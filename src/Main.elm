@@ -71,11 +71,11 @@ update msg model =
                     ))
             GameModelHM gameModel ->
                 let
-                    gameResponse_ = case (Debug.log "msg" msg) of
+                    gameResponse_ = case msg of
                         StartGame -> Just (HM.update StartGame gameModel)
-                        _ -> Debug.log "GameModelHM:Nothing" Nothing
+                        _ -> Nothing
                 in
-                (Debug.log "gameResponse_" gameResponse_)
+                gameResponse_
                 |> Maybe.map (\(gameModel_, hmCmd) ->
                     ( { model
                         | gameModel = GameModelHM gameModel_
@@ -83,7 +83,7 @@ update msg model =
                         }
                     , Cmd.map (\a -> case a of
                             GameMsg a_ -> GameMsg (HM a_)
-                            _ -> Debug.log "GameModelHM:NoOp" NoOp
+                            _ -> NoOp
                         ) hmCmd
                     ))
             _ -> Nothing
@@ -190,7 +190,7 @@ update msg model =
                                 , Cmd.map (\a -> case a of
                                         GameMsg a_ -> GameMsg (HM a_)
                                         CompleteGame -> CompleteGame
-                                        _ -> Debug.log "GameMsg:193" NoOp
+                                        _ -> NoOp
                                     ) hmCmd
                                 )
                             _ -> ( model, Cmd.none )
@@ -256,7 +256,7 @@ gameViewMap = List.map << Html.map
 
 gameMsgMapper : (a -> GameMsg) -> Msg a -> AppMsg
 gameMsgMapper toGameMsg msg =
-    case Debug.log "gameMsgMapper:msg" msg of
+    case msg of
         GameMsg a -> GameMsg (toGameMsg a)
         SetScreenSize viewport -> SetScreenSize viewport
         SelectFile string -> SelectFile string
