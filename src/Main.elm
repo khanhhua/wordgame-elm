@@ -235,7 +235,7 @@ view model =
                                 _ -> Nothing
                         )
     in
-    { title = "WordGame - ELM 2021"
+    { title = "WordGame 2021 - Elm-Lang"
     , body =
         [ model.collections
                 |> collectionListElement SelectFile (ShowCollection False) model.showingCollections
