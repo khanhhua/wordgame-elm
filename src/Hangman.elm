@@ -7,6 +7,7 @@ import Html exposing (Html, button, div, input, p, span, text)
 import Html.Attributes exposing (class, disabled, maxlength, tabindex, value)
 import Json.Decode as Json
 import Random
+import Task
 import Time
 import Html.Events exposing (on, onClick)
 
@@ -159,8 +160,6 @@ update msg model =
             in
             ( { model
                 | hiddenWord = hiddenWord
-                , showingResult = isCorrect
-                --, status = status
                 , answers = answers
             }
             , Cmd.none )
@@ -188,8 +187,6 @@ update msg model =
             in
             ( { model
                 | gallowStatus = gallowStatus
-                , showingResult = isLost
-                --, status = status_
                 , answers = answers
             }
             , Cmd.none )
@@ -198,11 +195,15 @@ update msg model =
                 head = model.words |> List.head
                 tail = model.words |> List.tail
                 stagedWords = head |> Maybe.map (\w -> w :: model.stagedWords ) |> Maybe.withDefault []
+                showingResult = head == Nothing
+                gameCmd = if showingResult
+                    then Task.perform identity (Task.succeed CompleteGame)
+                    else Cmd.none
             in
             ( { model
                 | stagedWords = stagedWords
                 , words = tail |> Maybe.withDefault []
-                , showingResult = False
+                , showingResult = showingResult
                 , hiddenWord = head
                     |> Maybe.map (\word ->
                         { text = word.text |> String.toLower
@@ -211,7 +212,7 @@ update msg model =
                         })
                 , gallowStatus = []
                 }
-            , Cmd.none
+            , gameCmd
             )
         --Tick _ ->
         --    let
@@ -282,8 +283,16 @@ gameStage model =
         currentWord = model.gameModel.hiddenWord
         showingResult = model.gameModel.showingResult
         keydownDecoder = (Json.string |> Json.andThen (String.toLower >> Json.succeed))
+        isLost = ( List.length gameModel.gallowStatus ) == ( Array.length executionSequence )
+        showingNext = currentWord
+            |> Maybe.map (\word ->
+                0 == ( word.displayedIndices
+                |> List.filter ((==)False)
+                |> List.length ) || isLost
+            )
+            |> Maybe.withDefault False
     in
-    div [ class "container container-md-fluid"
+    div [ class "container-fluid container-lg"
         , tabindex 1
         , on "keydown" (Json.map (\maybeEnteredKey ->
             maybeEnteredKey
@@ -304,8 +313,11 @@ gameStage model =
         ]
         [ div [ class "row" ]
             ( if model.status == GAMEOVER
-                then [ gameoverElement StartGame
-                    , reportElement gameModel.answers
+                then
+                    [ div [ class "col" ]
+                        [ gameoverElement StartGame
+                        , reportElement gameModel.answers
+                        ]
                     ]
                 else [ currentWord
                     |> Maybe.map (\word ->
@@ -331,7 +343,7 @@ gameStage model =
                     )
                 |> Maybe.withDefault empty
             else empty
-        , if showingResult
+        , if showingNext
             then ( div [ class "col-8 text-center"]
                 [ button
                     [ class "btn btn-lg btn-primary"

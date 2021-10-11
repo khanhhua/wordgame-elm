@@ -169,6 +169,9 @@ view m =
     in
     [ navBar (Just "Gender Race") (appMenu model) [action "Back" (SelectGame 0)]
     , gameStage (stageSize model.screensize) model
+    --, if model.gameModel.showingResult
+    --        then reportElement model.gameModel.answers
+    --        else empty
     ]
 
 appMenu : Model GRModel -> List (Action (Msg GRMsg))

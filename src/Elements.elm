@@ -96,7 +96,7 @@ stats answers =
 
 gameoverElement : msg -> Html msg
 gameoverElement onStartGame =
-    div [ class "display-1 text-center fw-bold mt-50p" ]
+    div [ class "display-1 text-center fw-bold" ]
         [ p [] [ text "GAME OVER!" ]
         , button
             [ onClick onStartGame

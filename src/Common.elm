@@ -18,6 +18,7 @@ type Msg a
     | StartGame
     | PauseGame
     | ResumeGame
+    | CompleteGame
     | GameMsg a
 
 
