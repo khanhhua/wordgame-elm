@@ -10,15 +10,6 @@
   }
 }
 
-.container-md-fluid {
-  max-width: 100%;
-  margin: 0 auto;
-
-  @media (min-width: 1536px) {
-    max-width: 720px;
-  }
-}
-
 .animation-tetrix {
   animation: tetrix 8s ease-in running forwards;
 }
