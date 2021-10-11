@@ -3,7 +3,9 @@ module GenderRace exposing (..)
 import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (class, id, style)
 import Html.Events exposing (onClick)
+import Process
 import Random
+import Task
 import Time
 
 import Common exposing (..)
@@ -48,7 +50,7 @@ update msg model =
             )
         StartGame ->
             let
-                count = List.length model.words
+                count = List.length model.words + List.length model.stagedWords
 
                 randomizer = Random.map ( \orderings ->
                     ( List.map2 (\ordering word  -> { ordering = ordering, position = ( 0, 0 ), word = word })
@@ -133,15 +135,18 @@ update msg model =
                 overflow = overflow_limit < ( stagedWords |> List.filter ( .expired >> not ) |> List.length )
 
                 words = model.words |> List.tail |> Maybe.withDefault []
-                --status = if 0 == ( words |> List.length )
-                --    then ENDING
-                --    else model.status
+                gameCmd = if 0 == ( words |> List.length ) || overflow
+                    then (
+                        Process.sleep (1/release_frequency * 990)
+                        |> Task.andThen ((always << Task.succeed) CompleteGame)
+                        |> Task.perform identity
+                    )
+                    else Cmd.none
             in
             ({ model
                 | words = words
                 , stagedWords = stagedWords
-                --, status = if overflow then GAMEOVER else status
-                } , Cmd.none )
+                } , gameCmd )
         _ -> ( model, Cmd.none )
 
 
@@ -169,9 +174,6 @@ view m =
     in
     [ navBar (Just "Gender Race") (appMenu model) [action "Back" (SelectGame 0)]
     , gameStage (stageSize model.screensize) model
-    --, if model.gameModel.showingResult
-    --        then reportElement model.gameModel.answers
-    --        else empty
     ]
 
 appMenu : Model GRModel -> List (Action (Msg GRMsg))
