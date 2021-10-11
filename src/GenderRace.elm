@@ -39,7 +39,7 @@ update : Msg GRMsg -> GRModel -> ( GRModel, Cmd (Msg GRMsg))
 update msg model =
     case msg of
         GameMsg (LoadWords words) ->
-            ( { model | words = words }, Cmd.none )
+            ( { model | words = words |> filterWords [MAS, FEM, NEU] }, Cmd.none )
         GameMsg (ApplyRandomness words) ->
             ( { model
                 | words = words
@@ -75,10 +75,6 @@ update msg model =
                 , stagedWords = stagedWords
                 , answers = []
                 }, Random.generate (GameMsg << ApplyRandomness) randomizer )
-        --PauseGame ->
-        --    ( { model | status = PAUSED }, Cmd.none )
-        --ResumeGame ->
-        --    ( { model | status = IN_GAME }, Cmd.none )
         GameMsg (WordAnimationComplete key) ->
             let
                 count = model.count - 1
@@ -95,18 +91,17 @@ update msg model =
             ( { model
                 | count = count
                 , stagedWords = stagedWords
-                --, status = status
                 } , Cmd.none)
         GameMsg (SelectAnswer word answerText) ->
             let
                 answers =
-                    if ( word.gender == MAS && answerText == "DER" )
-                        || ( word.gender == FEM && answerText == "DIE" )
-                        || ( word.gender == NEU && answerText == "DAS" )
+                    if ( List.member MAS word.tags && answerText == "DER" )
+                        || ( List.member FEM word.tags && answerText == "DIE" )
+                        || ( List.member NEU word.tags && answerText == "DAS" )
                     then
-                         ( Answer word.text word.gender True ) :: model.answers
+                         ( Answer word.text word.tags True ) :: model.answers
                     else
-                         ( Answer word.text word.gender False ) :: model.answers
+                         ( Answer word.text word.tags False ) :: model.answers
                 stagedWords = model.stagedWords
                     |> List.map (\word_ ->
                         if word_ == word then
@@ -174,6 +169,9 @@ view m =
     in
     [ navBar (Just "Gender Race") (appMenu model) [action "Back" (SelectGame 0)]
     , gameStage (stageSize model.screensize) model
+    --, if model.gameModel.showingResult
+    --        then reportElement model.gameModel.answers
+    --        else empty
     ]
 
 appMenu : Model GRModel -> List (Action (Msg GRMsg))

@@ -1,6 +1,6 @@
 module Elements exposing (..)
 
-import Common exposing (Answer, Collection, Model, Word, genderToString, getHi, getWi)
+import Common exposing (Answer, Collection, Model, Word, tagsToString, getHi, getWi)
 import Json.Decode
 
 import Html exposing (Attribute, Html, a, button, div, h3, li, nav, p, span, table, tbody, td, text, th, thead, tr, ul)
@@ -96,7 +96,7 @@ stats answers =
 
 gameoverElement : msg -> Html msg
 gameoverElement onStartGame =
-    div [ class "display-1 text-center fw-bold mt-50p" ]
+    div [ class "display-1 text-center fw-bold" ]
         [ p [] [ text "GAME OVER!" ]
         , button
             [ onClick onStartGame
@@ -123,7 +123,7 @@ reportElement answers =
                     tr []
                         [ td [] [ text ( index |> ((+) 1) >> String.fromInt ) ]
                         , td [] [ text answer.text ]
-                        , td [] [ text ( answer.gender |> genderToString ) ]
+                        , td [] [ text ( answer.tags |> tagsToString ) ]
                         , td [] [ text ( if answer.correct then "x" else "o" ) ]
                         ]
                 ) )
