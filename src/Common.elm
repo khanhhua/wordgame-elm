@@ -45,6 +45,9 @@ type Tag
     = MAS
     | FEM
     | NEU
+    | PLU
+    | NUM
+    | PRO
     | ADJ
     | ADV
     | VER
@@ -168,6 +171,9 @@ tagsToString tags =
             MAS -> "MAS"
             FEM -> "FEM"
             NEU -> "NEU"
+            PLU -> "PLU"
+            NUM -> "NUM"
+            PRO -> "PRO"
             ADJ -> "ADJ"
             ADV -> "ADV"
             VER -> "VER"

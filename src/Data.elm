@@ -49,7 +49,7 @@ loadCollectionsMetadata toMsg =
 deserializeTags : String -> Result Error (List Tag)
 deserializeTags tags =
     tags
-    |> String.split "|"
+    |> String.split ":"
     |> List.map tagFromString
     |> List.foldl (\item acc ->
         case acc of
@@ -95,6 +95,9 @@ tagFromString s =
         "MAS" -> Ok MAS
         "FEM" -> Ok FEM
         "NEU" -> Ok NEU
+        "PLU" -> Ok PLU
+        "NUM" -> Ok NUM
+        "PRO" -> Ok PRO
         "ADJ"  -> Ok ADJ
         "ADV"  -> Ok ADV
         "VER"  -> Ok VER
