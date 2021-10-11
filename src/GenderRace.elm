@@ -138,8 +138,7 @@ update msg model =
                 gameCmd = if 0 == ( words |> List.length ) || overflow
                     then (
                         Process.sleep (1/release_frequency * 990)
-                        |> Task.andThen ((always << Task.succeed) CompleteGame)
-                        |> Task.perform identity
+                        |> Task.perform (\_ -> CompleteGame)
                     )
                     else Cmd.none
             in
