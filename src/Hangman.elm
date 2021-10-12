@@ -1,10 +1,11 @@
 module Hangman exposing (..)
 
 import Array
+import Browser.Dom
 import Common exposing (Answer, GameStatus(..), Model, Msg(..), Tag(..), Word, empty, filterWords)
 import Elements exposing (Action, action, gameoverElement, navBar, reportElement, stageSize)
 import Html exposing (Html, button, div, input, p, span, text)
-import Html.Attributes exposing (class, disabled, maxlength, tabindex, value)
+import Html.Attributes exposing (class, disabled, id, maxlength, tabindex, value)
 import Json.Decode as Json
 import Random
 import Task
@@ -81,7 +82,7 @@ update msg model =
                         , hint = word.meaning
                         })
                 }
-            , Cmd.none
+            , Task.attempt (\_ -> NoOp) (Browser.Dom.focus "stage")
             )
         StartGame ->
             let
@@ -198,7 +199,7 @@ update msg model =
                 showingResult = head == Nothing
                 gameCmd = if showingResult
                     then Task.perform identity (Task.succeed CompleteGame)
-                    else Cmd.none
+                    else (Task.attempt (\_ -> NoOp) (Browser.Dom.focus "stage"))
             in
             ( { model
                 | stagedWords = stagedWords
@@ -293,6 +294,7 @@ gameStage model =
             |> Maybe.withDefault False
     in
     div [ class "container-fluid container-lg"
+        , id "stage"
         , tabindex 1
         , on "keydown" (Json.map (\maybeEnteredKey ->
             maybeEnteredKey
