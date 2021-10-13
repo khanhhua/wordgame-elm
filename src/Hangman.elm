@@ -166,7 +166,7 @@ update msg model =
             ( { model
                 | hiddenWord = hiddenWord
                 , answers = answers
-                , time = time_per_character
+                , time = if isCorrect then model.time else time_per_character
             }
             , Cmd.none )
         GameMsg PickWrong ->
@@ -236,7 +236,17 @@ update msg model =
 
 subscriptions : Model HMModel -> Sub HMMsg
 subscriptions model =
-    if model.status == IN_GAME then
+    let
+        isLost = ( List.length model.gameModel.gallowStatus ) == ( Array.length executionSequence )
+        showingNext = model.gameModel.hiddenWord
+                    |> Maybe.map (\word ->
+                        0 == ( word.displayedIndices
+                        |> List.filter ((==)False)
+                        |> List.length ) || isLost
+                    )
+                    |> Maybe.withDefault False
+    in
+    if model.status == IN_GAME && not showingNext then
         Sub.batch [ Time.every 1000 Tick ]
     else
         Sub.none
