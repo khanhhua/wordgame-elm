@@ -11,6 +11,8 @@ import Random
 import Task
 import Time
 import Html.Events exposing (on, onClick)
+import Svg exposing (Svg)
+import Svg.Attributes exposing (d, fill, height, stroke, strokeWidth, version, viewBox, width, x, y)
 
 type HMMsg
     = ApplyRandomness ( List Word )
@@ -33,6 +35,7 @@ type alias HMModel =
     , stagedWords : List Word -- Used words
     , answers : List Answer
     , gallowStatus : List GallowStatus
+    , time : Int
     }
 
 
@@ -48,7 +51,7 @@ type GallowStatus
 
 
 executionSequence = [ Head, Body, LeftHand, RightHand, LeftLeg, RightLeg, Noose, Dead ] |> Array.fromList
-
+time_per_character = 60
 
 initModel : HMModel
 initModel =
@@ -58,6 +61,7 @@ initModel =
     , stagedWords = []
     , answers = []
     , gallowStatus = []
+    , time = 60
     }
 
 
@@ -162,6 +166,7 @@ update msg model =
             ( { model
                 | hiddenWord = hiddenWord
                 , answers = answers
+                , time = if isCorrect then model.time else time_per_character
             }
             , Cmd.none )
         GameMsg PickWrong ->
@@ -212,36 +217,38 @@ update msg model =
                         , hint = word.meaning
                         })
                 , gallowStatus = []
+                , time = time_per_character
                 }
             , gameCmd
             )
-        --Tick _ ->
-        --    let
-        --        next = model.words |> List.head
-        --        stagedWords = case next of
-        --            Nothing -> model.stagedWords
-        --            Just word_ ->
-        --                [word_]
-        --                |> List.append model.stagedWords
-        --                |> updatePositions
-        --        overflow = overflow_limit < ( stagedWords |> List.filter ( .expired >> not ) |> List.length )
-        --
-        --        words = model.words |> List.tail |> Maybe.withDefault []
-        --        status = if 0 == ( words |> List.length )
-        --            then ENDING
-        --            else model.status
-        --    in
-        --    ({ model
-        --        | words = words
-        --        , stagedWords = stagedWords
-        --        , status = if overflow then GAMEOVER else status
-        --        } , Cmd.none )
+        GameMsg (Tick _) ->
+            let
+                time = model.time - 1
+                gameCmd = if time == 0
+                    then Task.perform identity (Task.succeed (GameMsg NextWord))
+                    else Cmd.none
+            in
+            ({ model
+                | time = time
+                }
+            , gameCmd )
         _ -> ( model, Cmd.none )
 
+subscriptions : Model HMModel -> Sub HMMsg
 subscriptions model =
-    --if model.status == IN_GAME then
-    --    Sub.batch [ Time.every (1/release_frequency * 1000) Tick ]
-    --else
+    let
+        isLost = ( List.length model.gameModel.gallowStatus ) == ( Array.length executionSequence )
+        showingNext = model.gameModel.hiddenWord
+                    |> Maybe.map (\word ->
+                        0 == ( word.displayedIndices
+                        |> List.filter ((==)False)
+                        |> List.length ) || isLost
+                    )
+                    |> Maybe.withDefault False
+    in
+    if model.status == IN_GAME && not showingNext then
+        Sub.batch [ Time.every 1000 Tick ]
+    else
         Sub.none
 
 
@@ -331,7 +338,8 @@ gameStage model =
                         , reportElement gameModel.answers
                         ]
                     ]
-                else [ currentWord
+                else if model.status == IN_GAME
+                then [ currentWord
                     |> Maybe.map (\word ->
                               div [ class "col-8" ]
                                   [ hiddenBoxes isLost word
@@ -342,11 +350,13 @@ gameStage model =
                               )
                           |> Maybe.withDefault empty
                     , div [ class "col-4" ]
-                        [ gallowElement gameModel.gallowStatus
+                        [ div [ class "float-end mt-2" ] [ timer gameModel.time time_per_character ]
+                        , gallowElement gameModel.gallowStatus
                         ]
                     ]
+                else [ empty ]
             )
-        , if not showingResult
+        , if model.status == IN_GAME && not showingResult
             then
                 currentWord
                 |> Maybe.map (\word ->
@@ -437,4 +447,25 @@ keyboardElement wordText =
         , div [ class "key-row d-flex justify-content-center" ]
             ( row3Keys |> List.map btn
             )
+        ]
+
+timer : Int -> Int -> Html msg
+timer time maxTime =
+    let
+        radius = 32.0
+        theta = (toFloat time / toFloat maxTime) * Basics.pi * 2
+        arcMode = if theta <= pi then "0" else "1"
+        (x, y) = fromPolar (radius, theta - (Basics.pi / 2))
+        (x2, y2) = (x + radius, y + radius)
+        definition = if time == maxTime
+            then d "M 32 0 A 32 32 1 1 1 31.999 0"
+            else d ("M 32 32 L 32 0 A 32 32 0 " ++ arcMode ++ " 1 " ++ String.fromFloat x2 ++ " " ++ String.fromFloat y2)
+
+    in
+    Svg.svg [ width "64", height "64", viewBox "-1 -1 66 66" ]
+        [ Svg.path
+            [ definition
+            , strokeWidth "0"
+            , fill "#ccc"
+            ] []
         ]
