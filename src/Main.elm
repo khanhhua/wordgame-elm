@@ -214,7 +214,18 @@ subscriptions model =
                         }
             in
             Sub.map (GR >> GameMsg) (GR.subscriptions model_)
-        GameModelHM gameModel_ -> Sub.map (HM >> GameMsg) (HM.subscriptions gameModel_)
+        GameModelHM gameModel_ ->
+            let
+                model_ = { screensize = model.screensize
+                        , status = model.status
+                        , gameModel = gameModel_
+                        , count = model.count
+                        , words = model.words
+                        , showingCollections = model.showingCollections
+                        , collections = model.collections
+                        }
+            in
+            Sub.map (HM >> GameMsg) (HM.subscriptions model_)
         NoGame -> Sub.none
 
 
