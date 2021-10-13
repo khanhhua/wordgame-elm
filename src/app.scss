@@ -90,6 +90,10 @@ $color-neutrum: #0f9c8c;
     &:disabled {
       background-color: var(--bs-cyan);
     }
+    &.wrong {
+      color: crimson;
+      font-weight: 700;
+    }
   }
 }
 

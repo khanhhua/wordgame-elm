@@ -299,16 +299,26 @@ gameStage model =
         , on "keydown" (Json.map (\maybeEnteredKey ->
             maybeEnteredKey
             |> Maybe.andThen (\enteredKey ->
-                currentWord
-                |> Maybe.map (\word ->
-                    if (String.contains enteredKey word.text)
-                        then (GameMsg << PickCharacter) enteredKey
-                        else (GameMsg PickWrong)
-                    )
+                if enteredKey == "enter"
+                then Just (GameMsg NextWord)
+                else currentWord
+                    |> Maybe.map (\word ->
+                        if (String.contains enteredKey word.text)
+                            then (GameMsg << PickCharacter) enteredKey
+                            else (GameMsg PickWrong)
+                        )
                 )
             |> Maybe.withDefault NoOp
             ) (Json.map2
-                (\filteringKey key -> if String.length filteringKey > 1 then Nothing else Just key)
+                (\filteringKey key ->
+                    if key == "enter"
+                    then if showingNext
+                        then Just key
+                        else Nothing
+                    else if String.length filteringKey > 1
+                        then Nothing
+                        else Just key
+                )
                 (Json.field "key" Json.string)
                 (Json.field "key" keydownDecoder)
             ))
@@ -324,7 +334,7 @@ gameStage model =
                 else [ currentWord
                     |> Maybe.map (\word ->
                               div [ class "col-8" ]
-                                  [ hiddenBoxes word
+                                  [ hiddenBoxes isLost word
                                   , div []
                                       [ p [ class "text-center display-2" ] [ text word.hint ]
                                       ]
@@ -345,46 +355,38 @@ gameStage model =
                     )
                 |> Maybe.withDefault empty
             else empty
-        , if showingNext
+        , if model.status == IN_GAME && not showingResult
             then ( div [ class "col-8 text-center"]
                 [ button
                     [ class "btn btn-lg btn-primary"
                     , onClick (GameMsg NextWord)
-                    ] [ text "Next"]
+                    ] [ text ( if showingNext then "Next" else "Skip" )]
                 ]
             )
             else empty
         ]
 
-hiddenBoxes : HiddenWord -> Html (Msg HMMsg)
-hiddenBoxes hiddenWord =
+hiddenBoxes : Bool -> HiddenWord -> Html (Msg HMMsg)
+hiddenBoxes revealAll hiddenWord =
     let
-        fnDisabled i =
+        fnVisibleAt : Int -> Bool
+        fnVisibleAt i =
             hiddenWord.displayedIndices
             |> Array.fromList
             |> Array.get i
-        fnVisibleChatAt i =
-            hiddenWord.displayedIndices
-            |> Array.fromList
-            |> Array.get i
-            |> Maybe.andThen (\visible ->
-                if not visible then Just "_"
-                else hiddenWord.text
-                    |> String.toList
-                    |> Array.fromList
-                    |> Array.get i
-                    |> Maybe.map String.fromChar
-            )
+            |> Maybe.withDefault False
     in
     div [ class "hidden-boxes mt-5" ]
         [ div [ class "input-group hangman-hidden-word mx-auto" ]
-            ( hiddenWord.displayedIndices
-            |> List.indexedMap (\index displayed ->
-                span
-                    [ disabled (fnDisabled index |> Maybe.withDefault True)
-                    , maxlength 1
-                    , class "form-control form-control-lg me-1"
-                    ] [ text ( fnVisibleChatAt index |> Maybe.withDefault "_" ) ]
+            ( hiddenWord.text
+            |> String.toList
+            |> List.indexedMap (\index item ->
+                if revealAll
+                then span [ class ("form-control form-control-lg m-1" ++
+                        ( if fnVisibleAt index then "" else " wrong" ) ) ]
+                    [ text (String.fromChar item) ]
+                else span [ class "form-control form-control-lg m-1" ]
+                    [ text ( if (fnVisibleAt index) then (String.fromChar item) else "_" ) ]
                 )
             )
         ]
