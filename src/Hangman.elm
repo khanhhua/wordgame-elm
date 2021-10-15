@@ -288,8 +288,8 @@ gameStage : Model HMModel -> Html (Msg HMMsg)
 gameStage model =
     let
         gameModel = model.gameModel
-        currentWord = model.gameModel.hiddenWord
-        showingResult = model.gameModel.showingResult
+        currentWord = gameModel.hiddenWord
+        showingResult = gameModel.showingResult
         keydownDecoder = (Json.string |> Json.andThen (String.toLower >> Json.succeed))
         isLost = ( List.length gameModel.gallowStatus ) == ( Array.length executionSequence )
         showingNext = currentWord
