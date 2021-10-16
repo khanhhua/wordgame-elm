@@ -431,7 +431,7 @@ keyboardElement wordText =
             if String.contains key wordText
                 then (GameMsg << PickCharacter) key
                 else GameMsg PickWrong
-        row1Keys = String.split "" "qwertzuiopü"
+        row1Keys = String.split "" "qwertzuiopüß"
         row2Keys = String.split "" "asdfghjklöä"
         row3Keys = String.split "" "yxcvbnm "
 

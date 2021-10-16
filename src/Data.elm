@@ -130,20 +130,37 @@ extractNouns stemForm meaning tags =
             case prefix of
                 "-" -> stem_ ++ suffix
                 ":" ->
-                    (( stem_
-                        |> String.reverse
-                        |> String.foldl (\char acc ->
-                            if acc.changed then { acc | result = char :: acc.result }
-                            else case char of
-                                'a' -> { acc | changed = True, result = 'ä' :: acc.result }
-                                'A' -> { acc | changed = True, result = 'Ä' :: acc.result }
-                                'o' -> { acc | changed = True, result = 'ö' :: acc.result }
-                                'O' -> { acc | changed = True, result = 'Ö' :: acc.result }
-                                'u' -> { acc | changed = True, result = 'ü' :: acc.result }
-                                'U' -> { acc | changed = True, result = 'Ü' :: acc.result }
-                                _ -> { acc | result = char :: acc.result }
-                            ) { changed = False, result = [] }
-                    ).result |> String.fromList) ++ suffix
+                    let
+                        indexToUpdate =
+                            [ "au"
+                             , "a"
+                             , "A"
+                             , "o"
+                             , "O"
+                             , "u"
+                             , "U"
+                             ]
+                             |> List.map (\item -> lastIndexOf item stem_)
+                             |> List.filter ((/=)(-1))
+                             |> List.minimum
+                             |> Maybe.withDefault -1
+                    in
+                    ( stem_
+                        |> String.toList
+                        |> List.indexedMap (\index char ->
+                            if index == indexToUpdate
+                            then case char of
+                                'a' -> 'ä'
+                                'A' -> 'Ä'
+                                'o' -> 'ö'
+                                'O' -> 'Ö'
+                                'u' -> 'ü'
+                                'U' -> 'Ü'
+                                other -> other
+                            else char
+                            )
+                        |> String.fromList
+                    ) ++ suffix
                 _ -> ""
 
         (stem, ending) = case String.split "," stemForm of
@@ -192,3 +209,20 @@ extractVerbs stemForm meaning tags =
 
 extractOthers : String -> String -> List Tag -> List Word
 extractOthers stemForm meaning tags = [Word stemForm meaning tags (0, 0) False]
+
+
+lastIndexOf : String -> String -> Int
+lastIndexOf needle haystack =
+    ( String.indices (String.slice 0 1 needle) haystack
+        |> List.foldl (\index acc ->
+            if ( needle
+                |> String.toList
+                |> List.indexedMap (\i c -> (i, c))
+                |> List.foldl (\(i,c) acc2 ->
+                    if not acc2 then acc2
+                    else (acc2 && (String.slice (i + index) (i + index + 1) haystack) == String.fromList [c])
+                    ) True
+            ) then index
+            else acc
+            ) -1
+    )
