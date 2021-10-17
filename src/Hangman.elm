@@ -288,8 +288,8 @@ gameStage : Model HMModel -> Html (Msg HMMsg)
 gameStage model =
     let
         gameModel = model.gameModel
-        currentWord = model.gameModel.hiddenWord
-        showingResult = model.gameModel.showingResult
+        currentWord = gameModel.hiddenWord
+        showingResult = gameModel.showingResult
         keydownDecoder = (Json.string |> Json.andThen (String.toLower >> Json.succeed))
         isLost = ( List.length gameModel.gallowStatus ) == ( Array.length executionSequence )
         showingNext = currentWord
@@ -431,7 +431,7 @@ keyboardElement wordText =
             if String.contains key wordText
                 then (GameMsg << PickCharacter) key
                 else GameMsg PickWrong
-        row1Keys = String.split "" "qwertzuiopü"
+        row1Keys = String.split "" "qwertzuiopüß"
         row2Keys = String.split "" "asdfghjklöä"
         row3Keys = String.split "" "yxcvbnm "
 
