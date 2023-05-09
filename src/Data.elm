@@ -15,8 +15,7 @@ collections =
 
 withBaseUrl : String -> String
 withBaseUrl path =
-    --"https://raw.githubusercontent.com/khanhhua/wordgame-data/master/" ++ path
-    "https://raw.githubusercontent.com/khanhhua/wordgame-data/b2-sicher/" ++ path
+    "https://raw.githubusercontent.com/khanhhua/wordgame-data/master/" ++ path
 
 
 loadFileByName : ( List Word -> msg ) -> String -> Cmd msg
