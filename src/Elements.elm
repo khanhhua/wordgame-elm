@@ -108,14 +108,21 @@ reportElement : List Answer -> Html msg
 reportElement answers =
     if 0 == ( answers |> List.length )
     then ( text "" )
-    else div [ class "col mx-auto mt-4" ]
+    else
+        let
+            correctCount = answers
+                |> List.foldl (\answer acc ->
+                    if answer.correct then acc + 1 else acc
+                ) 0
+        in
+        div [ class "col mx-auto mt-4" ]
         [ table [ class "table display-6" ]
             [ thead []
                 [ tr []
                     [ th [] [ text "#" ]
                     , th [] [ text "Word" ]
                     , th [] [ text "Gender" ]
-                    , th [] [ text "Correct" ]
+                    , th [] [ text <| "Correct (" ++ (String.fromInt correctCount) ++ ")"  ]
                     ]
                 ]
             , tbody [ class "font-monospace" ]
