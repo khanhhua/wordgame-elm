@@ -32,7 +32,6 @@
     "css-loader": "^5.2.2",
     "elm": "^0.19.1-5",
     "elm-webpack-loader": "^8.0.0",
-    "firebase": "^8.6.3",
     "html-loader": "^2.1.2",
     "html-webpack-plugin": "^5.3.1",
     "rimraf": "^3.0.2",
