@@ -10,6 +10,7 @@ collections =
     , "menschen"
     , "pons"
     , "sicher"
+    , "focus"
     ]
 
 
